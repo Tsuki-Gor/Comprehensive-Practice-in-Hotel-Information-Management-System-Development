@@ -723,6 +723,12 @@ class Figure_Canvas(FigureCanvas):
         # 第三步：创建一个子图，用于绘制图形用，111表示子图编号
         self.axes = self.fig.add_subplot(111)
 
+#----------------------------------------------------------
+#经过pyuic生成的python文件会生成一个类，并具有以下方法：
+#setupUi（self,Widget）:该方法将ui元素应用到给定的窗口，将ui中定义的所有控件添加到（widget）中，之后都可以通过self.xxx进行调用
+#retranslateui(self,widget):用于设置界面的文本
+#(不过只有setupUi是重要的）
+#----------------------------------------------------------
 class Ui_LoginWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("浙商大招待所")
@@ -1278,7 +1284,7 @@ class LoginPage(QMainWindow, Ui_LoginWindow):#我将其设置为 main control �
             QMessageBox().information(None, "提示", "账号或密码错误！", QMessageBox.Yes)
 
 
-    def forgetPwd(self):
+    def forgetPwd(self):#未实现
         from service.forgetPwd import fpWindow
         self.fpWindow = fpWindow()
         self.close()
@@ -1339,10 +1345,12 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+        #禁用listwidgeet的滚动条
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget_4.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget_4.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #绑定listwidget与stackedwidget，（实现同步变化，当listwidget的选中行变化时，stackedwidget的页面索引也改变）
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
         self.listWidget_4.currentRowChanged.connect(self.stackedWidget_2.setCurrentIndex)
         self.stackedWidget.setCurrentIndex(0)
@@ -1406,7 +1414,7 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         self.plotRevenue()
         self.plotOccupy()
 
-
+    #绘图相关
     def plotRevenue(self):
         c = Chart()
         x, y = c.getRevenue()
@@ -1451,11 +1459,14 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
     def __init__(self,parent=None):
         super(RoomOp, self).__init__(parent)
         self.setupUi(self)
+
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #非常好的时间选择器
         self.inputStartTime.setCalendarPopup(True)
         self.inputEndTime.setCalendarPopup(True)
         self.endtime.setCalendarPopup(True)
@@ -1466,6 +1477,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         self.tendtime_booking.setCalendarPopup(True)
         self.starttime_checkout.setCalendarPopup(True)
         self.endtime_checkout.setCalendarPopup(True)
+
         self.stackedWidget.setCurrentIndex(0)
         self.stackedWidget_sub.setCurrentIndex(0)
         self.stackedWidget_sub_2.setCurrentIndex(0)
@@ -1474,6 +1486,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         self.listWidget_2.currentRowChanged.connect(self.stackedWidget_sub.setCurrentIndex)
         self.listWidget_3.currentRowChanged.connect(self.stackedWidget_sub_2.setCurrentIndex)
         self.listWidget_4.currentRowChanged.connect(self.stackedWidget_sub_3.setCurrentIndex)
+        #绑定按钮
         self.commitCheckin.clicked.connect(self.singleCheckin)
         self.commitCheckinTeam.clicked.connect(self.teamCheckin)
         self.commitBookingClient.clicked.connect(self.reserveClient)
@@ -1522,7 +1535,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
     def findRoom(self):
         rtype = self.inputType.currentText()
         if rtype == '请选择...':
-            rtype = '%%'
+            rtype = '%%'#如果用户不选择房间类型，则查询全部类型
         print(rtype)
         if self.inputFree.isChecked():
             rstate = 1
