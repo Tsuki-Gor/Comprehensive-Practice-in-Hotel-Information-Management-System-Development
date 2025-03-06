@@ -1,34 +1,64 @@
+# 导入 sys 模块，用于与 Python 解释器进行交互，如获取命令行参数、退出程序等
 import sys
+# 从 PyQt5.QtWidgets 模块导入 QApplication、QMainWindow 和 QMessageBox 类，用于创建 GUI 应用程序、主窗口和消息框
 from PyQt5.QtWidgets import QApplication,QMainWindow,QMessageBox
+# 导入 pymysql 模块，用于与 MySQL 数据库进行交互
 import pymysql
+# 从 PyQt5.Qt 模块导入所有内容，通常包含了 PyQt5 的核心功能
 from PyQt5.Qt import *
+# 从 PyQt5.QtCore 模块导入 Qt 类，用于访问 Qt 框架的核心常量和枚举
 from PyQt5.QtCore import Qt
+# 定义数据库配置字典 localConfig，包含数据库连接所需的各项参数
 localConfig = {
     'host': 'localhost',
+    # 数据库主机地址
     'port': 3306,
+    # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    # 数据库用户名
+    'passwd': 'Tsuki',
+    # 数据库密码
     'db': 'dbdesign',
+    # 要连接的数据库名称
     'charset': 'utf8',
-    'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
+    # 字符编码
+    'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针，使用字典形式返回查询结果
 }#数据库配置连接
+# 导入 xlwt 模块，用于创建和写入 Excel 文件
 import xlwt
+# 导入 matplotlib 库，用于绘制图表
 import matplotlib
+# 设置 matplotlib 使用 Qt5Agg 后端，以便与 PyQt5 集成
 matplotlib.use("Qt5Agg")  # 声明使用QT5
+# 从 matplotlib.backends.backend_qt5agg 模块导入 FigureCanvasQTAgg 类，并将其重命名为 FigureCanvas，用于在 PyQt5 中显示 matplotlib 图表
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+# 从 matplotlib.figure 模块导入 Figure 类，用于创建图表对象
 from matplotlib.figure import Figure
+# 导入 datetime 模块，用于处理日期和时间
 import datetime
+# 导入 os 模块，用于与操作系统进行交互，如文件和目录操作
 import os
+# 将指定路径添加到 Python 模块搜索路径中，以便可以导入该路径下的模块
 sys.path.append('D:\mysql\bin')
+# 从 PyQt5 模块导入 QtCore、QtGui 和 QtWidgets 子模块
 from PyQt5 import QtCore, QtGui, QtWidgets
+# 导入 time 模块，用于处理时间相关的操作
 import time
+# 从 ui.ModifyPwd 模块导入 Ui_MpwdWindow 类，可能是用于修改密码的界面类
 from ui.ModifyPwd import Ui_MpwdWindow
+# 从 ui.report 模块导入 Ui_ReportWindow 类，可能是用于报表显示的界面类
 from ui.report import Ui_ReportWindow
+# 从 PyQt5.QtGui 模块导入 QPixmap 类，用于处理图像
 from PyQt5.QtGui import QPixmap
+# 从 PyQt5.QtWidgets 模块导入多个类，用于创建 GUI 组件，如主窗口、消息框、表格项、垂直布局、标签和按钮
 from PyQt5.QtWidgets import QMainWindow,QMessageBox,QTableWidgetItem,QVBoxLayout, QLabel,QPushButton
+# 从 ui.staff 模块导入 Ui_StaffWindow 类，可能是用于员工管理的界面类
 from ui.staff import Ui_StaffWindow
+# 从 ui.room 模块导入 Ui_RoomWindow 类，可能是用于房间管理的界面类
 from ui.room import Ui_RoomWindow
+# 注释掉的导入语句，可能是用于房间数据库操作的模块
 # from dao.dbOpRoom import Room
+# 重复导入 datetime 模块，建议删除重复导入
 import datetime
 
 
@@ -36,18 +66,29 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': 'Tsuki',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
 }#数据库配置连接
 def _initStaff():
+    """
+    初始化员工对象，创建一个全局的 Staff 类实例。
+    :return: 返回初始化后的 Staff 类实例
+    """
     global staff
+    # 创建一个 Staff 类的实例并赋值给全局变量 staff
     staff = Staff()
     return staff
+
 def get_staff():#员工账户
+    """
+    获取全局的员工对象。
+    :return: 返回全局的 Staff 类实例
+    """
     global staff
     return staff
+
 
 class Staff:
     """
