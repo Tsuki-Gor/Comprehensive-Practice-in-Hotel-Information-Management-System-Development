@@ -54,15 +54,4 @@ class Ui_MainWindow(object):
         self.pushButton_2.setText(_translate("MainWindow", "好的！"))
         self.pushButton_3.setText(_translate("MainWindow", "摸摸头"))
         self.pushButton.setText(_translate("MainWindow", "好吗？"))
-# import demo_rc
-
-if __name__ == '__main__':
-    import sys
-    from PyQt5.QtWidgets import QApplication, QMainWindow
-    import demo_rc # 导入添加的资源（根据实际情况填写文件名）
-    app = QApplication(sys.argv)
-    MainWindow = QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
-    sys.exit(app.exec_())
+import demo_rc
