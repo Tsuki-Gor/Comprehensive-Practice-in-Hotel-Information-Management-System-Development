@@ -7,7 +7,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -36,7 +36,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -54,6 +54,7 @@ class Staff:
     员工操作类
     """
     def __init__(self, config=localConfig):
+        #连接数据库
         self.db = pymysql.connect(host=config['host'],port=config['port'],user=config['user'],
                                       passwd=config['passwd'],db=config['db'],charset=config['charset'],
                                       cursorclass=config['cursorclass'])
@@ -75,7 +76,8 @@ class Staff:
 
         try:
             self.cursor.execute("select * from staff")
-            data = self.cursor.fetchall()
+            data = self.cursor.fetchall()#获取查询结果
+            #在数据库中查找用户名与密码，如果匹配则读入相关信息
             for row in data:
                 if row['susername'] == username and row['spassword'] == password:
                     self.username = username
@@ -1292,6 +1294,7 @@ class HomePage(QMainWindow, Ui_HomeWindow):
         self.staff = get_staff()
         print(self.staff.sname[0])
         self.welcome.setText(self.staff.sname + ',你好。你的权限为：' + self.staff.srole + '。今天是' + time.strftime("%Y-%m-%d", time.localtime()))
+        #绑定按钮，括号内都是跳转的方法
         self.staffbutton.clicked.connect(self.gotoStaff)
         self.roombutton.clicked.connect(self.gotoRoom)
         # self.clientbutton.clicked.connect(self.gotoClient)
