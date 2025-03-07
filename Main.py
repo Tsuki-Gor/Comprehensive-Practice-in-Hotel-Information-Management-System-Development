@@ -15,9 +15,7 @@ localConfig = {
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    # 数据库用户名
-    'passwd': 'Tsuki',
-    # 数据库密码
+    'passwd': '123456',
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -67,7 +65,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': 'Tsuki',
+    'passwd': '123456',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -96,6 +94,7 @@ class Staff:
     员工操作类
     """
     def __init__(self, config=localConfig):
+        #连接数据库
         self.db = pymysql.connect(host=config['host'],port=config['port'],user=config['user'],
                                       passwd=config['passwd'],db=config['db'],charset=config['charset'],
                                       cursorclass=config['cursorclass'])
@@ -127,7 +126,8 @@ class Staff:
 
         try:
             self.cursor.execute("select * from staff")
-            data = self.cursor.fetchall()
+            data = self.cursor.fetchall()#获取查询结果
+            #在数据库中查找用户名与密码，如果匹配则读入相关信息
             for row in data:
                 if row['susername'] == username and row['spassword'] == password:
                     self.username = username
@@ -867,6 +867,12 @@ class Figure_Canvas(FigureCanvas):
         # 第三步：创建一个子图，用于绘制图形用，111表示子图编号
         self.axes = self.fig.add_subplot(111)
 
+#----------------------------------------------------------
+#经过pyuic生成的python文件会生成一个类，并具有以下方法：
+#setupUi（self,Widget）:该方法将ui元素应用到给定的窗口，将ui中定义的所有控件添加到（widget）中，之后都可以通过self.xxx进行调用
+#retranslateui(self,widget):用于设置界面的文本
+#(不过只有setupUi是重要的）
+#----------------------------------------------------------
 # class Ui_LoginWindow(object):
 #     def setupUi(self, MainWindow):
 #         MainWindow.setObjectName("浙商大招待所")
@@ -1615,7 +1621,7 @@ class LoginPage(QMainWindow, Ui_LoginWindow):#我将其设置为 main control �
             QMessageBox().information(None, "提示", "账号或密码错误！", QMessageBox.Yes)
 
 
-    def forgetPwd(self):
+    def forgetPwd(self):#未实现
         from service.forgetPwd import fpWindow
         self.fpWindow = fpWindow()
         self.close()
@@ -1633,6 +1639,7 @@ class HomePage(QMainWindow, Ui_HomeWindow):
         self.staff = get_staff()
         print(self.staff.sname[0])
         self.welcome.setText(self.staff.sname + ',你好。你的权限为：' + self.staff.srole + '。今天是' + time.strftime("%Y-%m-%d", time.localtime()))
+        #绑定按钮，括号内都是跳转的方法
         # 多个按钮都 绑定了槽函数
         self.staffbutton.clicked.connect(self.gotoStaff)
         self.roombutton.clicked.connect(self.gotoRoom)
@@ -1678,10 +1685,12 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+        #禁用listwidgeet的滚动条
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget_4.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget_4.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #绑定listwidget与stackedwidget，（实现同步变化，当listwidget的选中行变化时，stackedwidget的页面索引也改变）
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
         self.listWidget_4.currentRowChanged.connect(self.stackedWidget_2.setCurrentIndex)
         self.stackedWidget.setCurrentIndex(0)
@@ -1745,7 +1754,7 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         self.plotRevenue()
         self.plotOccupy()
 
-
+    #绘图相关
     def plotRevenue(self):
         c = Chart()
         x, y = c.getRevenue()
@@ -1790,11 +1799,14 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
     def __init__(self,parent=None):
         super(RoomOp, self).__init__(parent)
         self.setupUi(self)
+
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #非常好的时间选择器
         self.inputStartTime.setCalendarPopup(True)
         self.inputEndTime.setCalendarPopup(True)
         self.endtime.setCalendarPopup(True)
@@ -1805,6 +1817,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         self.tendtime_booking.setCalendarPopup(True)
         self.starttime_checkout.setCalendarPopup(True)
         self.endtime_checkout.setCalendarPopup(True)
+
         self.stackedWidget.setCurrentIndex(0)
         self.stackedWidget_sub.setCurrentIndex(0)
         self.stackedWidget_sub_2.setCurrentIndex(0)
@@ -1813,6 +1826,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         self.listWidget_2.currentRowChanged.connect(self.stackedWidget_sub.setCurrentIndex)
         self.listWidget_3.currentRowChanged.connect(self.stackedWidget_sub_2.setCurrentIndex)
         self.listWidget_4.currentRowChanged.connect(self.stackedWidget_sub_3.setCurrentIndex)
+        #绑定按钮
         self.commitCheckin.clicked.connect(self.singleCheckin)
         self.commitCheckinTeam.clicked.connect(self.teamCheckin)
         self.commitBookingClient.clicked.connect(self.reserveClient)
@@ -1861,7 +1875,7 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
     def findRoom(self):
         rtype = self.inputType.currentText()
         if rtype == '请选择...':
-            rtype = '%%'
+            rtype = '%%'#如果用户不选择房间类型，则查询全部类型
         print(rtype)
         if self.inputFree.isChecked():
             rstate = 1
