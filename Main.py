@@ -114,6 +114,16 @@ class Staff:
         self.sphone = None
 
     def userLogin(self, username, password):
+        """
+        员工登录方法，检查用户名和密码是否匹配。
+
+        参数：
+            username (str): 用户名
+            password (str): 密码
+
+        返回：
+            str: 返回员工的角色（管理员/前台），如果登录失败返回 False
+        """
 
         try:
             self.cursor.execute("select * from staff")
@@ -135,6 +145,17 @@ class Staff:
             return False
 
     def modifyPasswd(self, sid, newPasswd, oldPasswd):
+        """
+        修改员工密码，验证旧密码后进行更新。
+
+        参数：
+            sid (str): 员工ID
+            newPasswd (str): 新密码
+            oldPasswd (str): 旧密码
+
+        返回：
+            bool: 修改成功返回 True，失败返回 False
+        """
 
 
         try:
@@ -154,7 +175,17 @@ class Staff:
             return False
 
     def forgetPasswd(self, newPasswd,sid,sidcard):
+        """
+        通过员工身份证号重置密码。
 
+        参数：
+            newPasswd (str): 新密码
+            sid (str): 员工ID
+            sidcard (str): 员工身份证号
+
+        返回：
+            bool: 重置成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("select * from staff where sid=%s",sid)
             data = self.cursor.fetchall()[0]
@@ -171,7 +202,23 @@ class Staff:
             return False
 
     def addStaff(self,sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone):
+        """
+        添加新员工到数据库。
 
+        参数：
+            sid (str): 员工ID
+            sname (str): 员工姓名
+            ssex (str): 性别
+            stime (str): 入职时间
+            susername (str): 登录用户名
+            spassword (str): 登录密码
+            srole (str): 角色（管理员/前台）
+            sidcard (str): 身份证号
+            sphone (str): 手机号
+
+        返回：
+            bool: 添加成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("insert into staff values(%s,%s,%s,%s,%s,%s,%s,%s,%s)",(sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone))
             self.db.commit()
@@ -182,8 +229,19 @@ class Staff:
             return False
 
     def showAllStaff(self,sname):
+        """
+        按姓名查询员工信息（支持模糊查询）。
 
+        参数：
+            sname (str): 员工姓名（支持模糊匹配）
+
+        返回：
+            list: 查询到的员工信息列表，失败返回 False
+
+        支持模糊查询，可用于搜索类似 张%（张开头的员工）。
+        """
         try:
+            # like %s 支持模糊查询，可用于搜索类似 张%（张开头的员工）。
             self.cursor.execute("select * from staff where sname like %s",(sname))
             data = self.cursor.fetchall()
             return data
@@ -192,8 +250,20 @@ class Staff:
             return False
 
     def deleteStaff(self,sid,sname,sidcard):
+        """
+        删除指定员工，需要提供员工ID、姓名和身份证号进行验证。
 
+        参数：
+            sid (str): 员工ID
+            sname (str): 员工姓名
+            sidcard (str): 员工身份证号
+
+        返回：
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
+            # %s 是 占位符，防止 SQL 注入攻击。
+            # sid, 注意这里的逗号，因为 Python 传入单个值时必须是元组 (sid,)，否则 pymysql 会报错。
             self.cursor.execute("delete from staff where sid=%s and sname=%s and sidcard=%s",(sid,sname,sidcard))
             self.db.commit()
             return True
@@ -203,7 +273,15 @@ class Staff:
             return False
 
     def delStaff(self,sid):
+        """
+        根据员工ID删除员工。
 
+        参数：
+            sid (str): 员工ID
+
+        返回：
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("delete from staff where sid=%s",(sid))
             self.db.commit()
@@ -213,14 +291,40 @@ class Staff:
             return False
 
     def modifyStaff(self, row, column, value):
+        """
+        修改员工信息。
 
+        参数：
+            row (int): 需要修改的员工在查询结果中的行索引
+            column (int): 需要修改的列索引
+            value (str): 新值
+
+        返回：
+            bool: 修改成功返回 True，失败返回 False
+
+        说明：
+            - 该方法通过 SQL_COLUMN 列表定位数据库字段
+            - row 表示要修改的员工位置
+            - column 对应需要修改的字段索引
+        """
+        # 这个列表存储了 staff 表的列名，用于匹配 column 参数。
         SQL_COLUMN = ['sid','sname','ssex','stime','susername','spassword','srole','sidcard','sphone']
         try:
             self.cursor.execute("select * from staff")
             data = self.cursor.fetchall()
-            rid_selected = data[row]['rid']
-            sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
-            self.cursor.execute(sql)
+
+
+            # 这里有严重错误
+            # rid_selected = data[row]['rid']
+            # sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
+            # self.cursor.execute(sql)
+
+            sid_selected =  data[row]['sid']
+            sql = "update staff set " + SQL_COLUMN[column] + " = %s where sid = %s"
+            self.cursor.execute(sql,(value,sid_selected))
+
+
+
             self.db.commit()
             return True
         except Exception as e:
@@ -1524,9 +1628,12 @@ class HomePage(QMainWindow, Ui_HomeWindow):
         """
         super(HomePage, self).__init__(parent)
         self.setupUi(self)
+        # get_staff() 是一个 全局函数，返回当前登录的 Staff 对象。
+        # self.staff.sname[0]：获取 员工名字的第一个字符，用于显示欢迎信息。
         self.staff = get_staff()
         print(self.staff.sname[0])
         self.welcome.setText(self.staff.sname + ',你好。你的权限为：' + self.staff.srole + '。今天是' + time.strftime("%Y-%m-%d", time.localtime()))
+        # 多个按钮都 绑定了槽函数
         self.staffbutton.clicked.connect(self.gotoStaff)
         self.roombutton.clicked.connect(self.gotoRoom)
         # self.clientbutton.clicked.connect(self.gotoClient)
@@ -1998,11 +2105,15 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def __init__(self, parent=None):
         super(StaffOP, self).__init__(parent)
         self.setupUi(self)
+        # 让日期选择器弹出一个日历窗口，让用户可以方便地选择日期
         self.inputdate.setCalendarPopup(True)
+        # 默认显示第一个子页面
         self.stackedWidget.setCurrentIndex(0)
+        # 绑定用户信息
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+
         self.name.setText(self.staff.sname)
         self.sname.setText(self.staff.sname)
         self.ssex.setText(self.staff.ssex)
@@ -2011,9 +2122,15 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
         self.sphone.setText(self.staff.sphone)
         self.sidcard.setText(self.staff.sidcard)
         self.sidcard_2.setText(self.staff.sid)
+
+        # 列表组件设置
+        # listWidget 允许 点击不同选项，切换到不同的页面（通常结合 QStackedWidget 使用）。
+        # currentRowChanged 信号：当用户点击 listWidget 里的某一项时，会触发这个信号，返回当前选中的行索引。
+        # setCurrentIndex()：这个方法用于 切换 QStackedWidget 的页面。
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         # 绑定事件
         self.searchNB.clicked.connect(self.searchStaff)
         self.commitAdd.clicked.connect(self.addStaff)
@@ -2024,6 +2141,9 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def searchStaff(self):
         sname = str(self.searchName.text())
         s_sname = '%' + sname + '%'
+        # self.staff.srole 代表 当前用户的权限：
+        # 1 代表普通员工，无权查询。
+        # 2 代表管理员，允许查询。
         if int(self.staff.srole) > 1:
             self.data = self.staff.showAllStaff(s_sname)
             # print(self.data)
@@ -2031,6 +2151,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             self.columnNum = len(self.data[0])
             print(self.rowNum)
             print(self.columnNum)
+            # 更新 QTableWidget
             self.searchTable.setRowCount(self.rowNum)
             self.searchTable.setColumnCount(self.columnNum)
             for i, da in enumerate(self.data):
@@ -2045,6 +2166,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def addStaff(self):
         sid = self.inputsid.text().split()
         sname = self.inputname.text().split()
+        # self.inputmale.isChecked() 检测 性别选择按钮是否被选中。
         if self.inputmale.isChecked():
             ssex = '男'
         elif self.inputfemale.isChecked():
@@ -2062,6 +2184,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "信息不能为空！", QMessageBox.Yes)
             return False
         if int(self.staff.srole) > 1:
+            # 调用Staff类实例的方法
             ret = self.staff.addStaff(sid,sname,ssex,stime,susername,spwd,srole,sidcard,sphone)
             if ret:
                 QMessageBox().information(None, "提示", "添加成功！", QMessageBox.Yes)
@@ -2069,23 +2192,35 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "权限不符合要求！", QMessageBox.Yes)
 
     def deleteStaff(self):
+        """
+        根据用户在输入框中的输入，来删除员工。
+        """
         sid = self.desid.text()
         sname = self.dename.text()
         sidcard = self.deidcard.text()
+        # 数据校验：检验是否有空值
         if sid == '' or sname == '' or sidcard == '':
+            # 参数1： None 代表没有指定父窗口（可以改为 self）。
+            # 参数2： "提示" 是消息框标题。
+            # 参数3： "信息不能为空！" 是提示内容。
+            # 参数4： QMessageBox.Yes 代表 确定按钮。
             QMessageBox().information(None, "提示", "信息不能为空！", QMessageBox.Yes)
             return False
         if int(self.staff.srole) > 1:
             self.staff.deleteStaff(sid,sname,sidcard)
+            # showAllStaff('%%') 查询所有员工信息，'%%' 是 SQL LIKE 语法的通配符，代表 查询所有员工。
             self.data = self.staff.showAllStaff('%%')
             print(self.data)
             self.rowNum = len(self.data)
             self.columnNum = len(self.data[0])
             self.deleteTable.setRowCount(self.rowNum)
             self.deleteTable.setColumnCount(self.columnNum)
+            # data可能是一个列表，每个值是一个员工的字典。
+            # enumerate(self.data) 让 i 代表 行索引，da 代表 员工数据（字典）。
             for i, da in enumerate(self.data):
                 # 字典转列表
                 da = list(da.values())
+                # 遍历一个员工数据字典的每个字段。
                 for j in range(self.columnNum):
                     self.itemContent = QTableWidgetItem(( '%s' )  % (da[j]))
                     self.deleteTable.setItem(i, j, self.itemContent)
@@ -2094,22 +2229,36 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "权限不符合要求！", QMessageBox.Yes)
 
     def tableDel(self):
+        """
+        从表格中获取要删除的员工，并删除
+        """
+        # 获取选中的表格行
         row_selected = self.searchTable.selectedItems()
         if len(row_selected) == 0:
             return
+        # 获取选中行的 第一个单元格的内容（通常是 员工ID）。
         row = row_selected[0].text()
+        # 调用 delStaff() 方法，删除该员工。
         self.staff.delStaff(row)
+        # 获取选中行的索引。
         row = row_selected[0].row()
+        # 从 QTableWidget 中删除该行。
         self.searchTable.removeRow(row)
         QMessageBox().information(None, "提示", "删除成功！", QMessageBox.Yes)
 
     def tableModify(self):
+        """
+
+        """
         row_selected = self.searchTable.selectedItems()
         if len(row_selected) == 0:
             return
+        # 获取当前选中的行索引。这里的行索引是什么？
         row = row_selected[0].row()
         column  = row_selected[0].column()
+        # 获取 用户输入的新值。
         value = self.modifyvalue.text()
+        # 调用 modifyStaff() 更新数据库中的员工信息。
         self.staff.modifyStaff(row,column,value)
         tvalue = QTableWidgetItem(('%s') % (value))
         self.searchTable.setItem(row,column, tvalue)
