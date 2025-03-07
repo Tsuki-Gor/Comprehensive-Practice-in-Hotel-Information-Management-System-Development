@@ -1,53 +1,93 @@
+# 导入 sys 模块，用于与 Python 解释器进行交互，如获取命令行参数、退出程序等
 import sys
+# 从 PyQt5.QtWidgets 模块导入 QApplication、QMainWindow 和 QMessageBox 类，用于创建 GUI 应用程序、主窗口和消息框
 from PyQt5.QtWidgets import QApplication,QMainWindow,QMessageBox
+# 导入 pymysql 模块，用于与 MySQL 数据库进行交互
 import pymysql
+# 从 PyQt5.Qt 模块导入所有内容，通常包含了 PyQt5 的核心功能
 from PyQt5.Qt import *
+# 从 PyQt5.QtCore 模块导入 Qt 类，用于访问 Qt 框架的核心常量和枚举
 from PyQt5.QtCore import Qt
+# 定义数据库配置字典 localConfig，包含数据库连接所需的各项参数
 localConfig = {
     'host': 'localhost',
+    # 数据库主机地址
     'port': 3306,
+    # 数据库端口号
     'user': 'root',
-    'passwd': '315225zhang',
+    'passwd': '123456',
     'db': 'dbdesign',
+    # 要连接的数据库名称
     'charset': 'utf8',
-    'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
+    # 字符编码
+    'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针，使用字典形式返回查询结果
 }#数据库配置连接
+# 导入 xlwt 模块，用于创建和写入 Excel 文件
 import xlwt
+# 导入 matplotlib 库，用于绘制图表
 import matplotlib
+# 设置 matplotlib 使用 Qt5Agg 后端，以便与 PyQt5 集成
 matplotlib.use("Qt5Agg")  # 声明使用QT5
+# 从 matplotlib.backends.backend_qt5agg 模块导入 FigureCanvasQTAgg 类，并将其重命名为 FigureCanvas，用于在 PyQt5 中显示 matplotlib 图表
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+# 从 matplotlib.figure 模块导入 Figure 类，用于创建图表对象
 from matplotlib.figure import Figure
+# 导入 datetime 模块，用于处理日期和时间
 import datetime
+# 导入 os 模块，用于与操作系统进行交互，如文件和目录操作
 import os
+# 将指定路径添加到 Python 模块搜索路径中，以便可以导入该路径下的模块
 sys.path.append('D:\mysql\bin')
+# 从 PyQt5 模块导入 QtCore、QtGui 和 QtWidgets 子模块
 from PyQt5 import QtCore, QtGui, QtWidgets
+# 导入 time 模块，用于处理时间相关的操作
 import time
+# 从 ui.ModifyPwd 模块导入 Ui_MpwdWindow 类，可能是用于修改密码的界面类
 from ui.ModifyPwd import Ui_MpwdWindow
+# 从 ui.report 模块导入 Ui_ReportWindow 类，可能是用于报表显示的界面类
 from ui.report import Ui_ReportWindow
+# 从 PyQt5.QtGui 模块导入 QPixmap 类，用于处理图像
 from PyQt5.QtGui import QPixmap
+# 从 PyQt5.QtWidgets 模块导入多个类，用于创建 GUI 组件，如主窗口、消息框、表格项、垂直布局、标签和按钮
 from PyQt5.QtWidgets import QMainWindow,QMessageBox,QTableWidgetItem,QVBoxLayout, QLabel,QPushButton
+# 从 ui.staff 模块导入 Ui_StaffWindow 类，可能是用于员工管理的界面类
 from ui.staff import Ui_StaffWindow
+# 从 ui.room 模块导入 Ui_RoomWindow 类，可能是用于房间管理的界面类
 from ui.room import Ui_RoomWindow
+# 注释掉的导入语句，可能是用于房间数据库操作的模块
 # from dao.dbOpRoom import Room
+# 重复导入 datetime 模块，建议删除重复导入
 import datetime
 
+import re
 
 localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '315225zhang',
+    'passwd': '123456',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
 }#数据库配置连接
 def _initStaff():
+    """
+    初始化员工对象，创建一个全局的 Staff 类实例。
+    :return: 返回初始化后的 Staff 类实例
+    """
     global staff
+    # 创建一个 Staff 类的实例并赋值给全局变量 staff
     staff = Staff()
     return staff
+
 def get_staff():#员工账户
+    """
+    获取全局的员工对象。
+    :return: 返回全局的 Staff 类实例
+    """
     global staff
     return staff
+
 
 class Staff:
     """
@@ -73,6 +113,16 @@ class Staff:
         self.sphone = None
 
     def userLogin(self, username, password):
+        """
+        员工登录方法，检查用户名和密码是否匹配。
+
+        参数：
+            username (str): 用户名
+            password (str): 密码
+
+        返回：
+            str: 返回员工的角色（管理员/前台），如果登录失败返回 False
+        """
 
         try:
             self.cursor.execute("select * from staff")
@@ -95,6 +145,17 @@ class Staff:
             return False
 
     def modifyPasswd(self, sid, newPasswd, oldPasswd):
+        """
+        修改员工密码，验证旧密码后进行更新。
+
+        参数：
+            sid (str): 员工ID
+            newPasswd (str): 新密码
+            oldPasswd (str): 旧密码
+
+        返回：
+            bool: 修改成功返回 True，失败返回 False
+        """
 
 
         try:
@@ -114,7 +175,17 @@ class Staff:
             return False
 
     def forgetPasswd(self, newPasswd,sid,sidcard):
+        """
+        通过员工身份证号重置密码。
 
+        参数：
+            newPasswd (str): 新密码
+            sid (str): 员工ID
+            sidcard (str): 员工身份证号
+
+        返回：
+            bool: 重置成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("select * from staff where sid=%s",sid)
             data = self.cursor.fetchall()[0]
@@ -131,7 +202,23 @@ class Staff:
             return False
 
     def addStaff(self,sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone):
+        """
+        添加新员工到数据库。
 
+        参数：
+            sid (str): 员工ID
+            sname (str): 员工姓名
+            ssex (str): 性别
+            stime (str): 入职时间
+            susername (str): 登录用户名
+            spassword (str): 登录密码
+            srole (str): 角色（管理员/前台）
+            sidcard (str): 身份证号
+            sphone (str): 手机号
+
+        返回：
+            bool: 添加成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("insert into staff values(%s,%s,%s,%s,%s,%s,%s,%s,%s)",(sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone))
             self.db.commit()
@@ -142,8 +229,19 @@ class Staff:
             return False
 
     def showAllStaff(self,sname):
+        """
+        按姓名查询员工信息（支持模糊查询）。
 
+        参数：
+            sname (str): 员工姓名（支持模糊匹配）
+
+        返回：
+            list: 查询到的员工信息列表，失败返回 False
+
+        支持模糊查询，可用于搜索类似 张%（张开头的员工）。
+        """
         try:
+            # like %s 支持模糊查询，可用于搜索类似 张%（张开头的员工）。
             self.cursor.execute("select * from staff where sname like %s",(sname))
             data = self.cursor.fetchall()
             return data
@@ -152,8 +250,20 @@ class Staff:
             return False
 
     def deleteStaff(self,sid,sname,sidcard):
+        """
+        删除指定员工，需要提供员工ID、姓名和身份证号进行验证。
 
+        参数：
+            sid (str): 员工ID
+            sname (str): 员工姓名
+            sidcard (str): 员工身份证号
+
+        返回：
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
+            # %s 是 占位符，防止 SQL 注入攻击。
+            # sid, 注意这里的逗号，因为 Python 传入单个值时必须是元组 (sid,)，否则 pymysql 会报错。
             self.cursor.execute("delete from staff where sid=%s and sname=%s and sidcard=%s",(sid,sname,sidcard))
             self.db.commit()
             return True
@@ -163,7 +273,15 @@ class Staff:
             return False
 
     def delStaff(self,sid):
+        """
+        根据员工ID删除员工。
 
+        参数：
+            sid (str): 员工ID
+
+        返回：
+            bool: 删除成功返回 True，失败返回 False
+        """
         try:
             self.cursor.execute("delete from staff where sid=%s",(sid))
             self.db.commit()
@@ -173,14 +291,40 @@ class Staff:
             return False
 
     def modifyStaff(self, row, column, value):
+        """
+        修改员工信息。
 
+        参数：
+            row (int): 需要修改的员工在查询结果中的行索引
+            column (int): 需要修改的列索引
+            value (str): 新值
+
+        返回：
+            bool: 修改成功返回 True，失败返回 False
+
+        说明：
+            - 该方法通过 SQL_COLUMN 列表定位数据库字段
+            - row 表示要修改的员工位置
+            - column 对应需要修改的字段索引
+        """
+        # 这个列表存储了 staff 表的列名，用于匹配 column 参数。
         SQL_COLUMN = ['sid','sname','ssex','stime','susername','spassword','srole','sidcard','sphone']
         try:
             self.cursor.execute("select * from staff")
             data = self.cursor.fetchall()
-            rid_selected = data[row]['rid']
-            sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
-            self.cursor.execute(sql)
+
+
+            # 这里有严重错误
+            # rid_selected = data[row]['rid']
+            # sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
+            # self.cursor.execute(sql)
+
+            sid_selected =  data[row]['sid']
+            sql = "update staff set " + SQL_COLUMN[column] + " = %s where sid = %s"
+            self.cursor.execute(sql,(value,sid_selected))
+
+
+
             self.db.commit()
             return True
         except Exception as e:
@@ -729,16 +873,283 @@ class Figure_Canvas(FigureCanvas):
 #retranslateui(self,widget):用于设置界面的文本
 #(不过只有setupUi是重要的）
 #----------------------------------------------------------
+# class Ui_LoginWindow(object):
+#     def setupUi(self, MainWindow):
+#         MainWindow.setObjectName("浙商大招待所")
+#         MainWindow.resize(800, 600)
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         MainWindow.setFont(font)
+#         icon = QtGui.QIcon()
+#         icon.addPixmap(QtGui.QPixmap("../../../../../../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+#         MainWindow.setWindowIcon(icon)
+#         MainWindow.setStyleSheet("\n"
+# "*{\n"
+# "font-size:24px;\n"
+# "font-family:Century Gothic;\n"
+# "}\n"
+# "QFrame{\n"
+# "background:rgba(0,0,0,0.8);\n"
+# "border-radius:15px;\n"
+# "}\n"
+# "#centralwidget{\n"
+# "border-image:url(D:/pictures/login4.jpg) strectch；\n"
+# "}\n"
+# "\n"
+# "#toolButton{\n"
+# "background:red;\n"
+# "border-radius:60px;\n"
+# "}\n"
+# "QLabel{\n"
+# "color:white;\n"
+# "background:transparent;\n"
+# "}\n"
+# "QPushButton{\n"
+# "background:red;;\n"
+# "border-radius:15px;\n"
+# "}\n"
+# "QPushButton:hover{\n"
+# "background:#333;\n"
+# "border-radius:15px;\n"
+# "background:#49ebff;\n"
+# "}\n"
+# "QLineEdit{\n"
+# "background:transparent;\n"
+# "border:none;\n"
+# "color:#717072;\n"
+# "border-bottom:1px solid #717072;\n"
+# "}")
+#         self.centralwidget = QtWidgets.QWidget(MainWindow)
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.centralwidget.setFont(font)
+#         self.centralwidget.setFocusPolicy(QtCore.Qt.WheelFocus)
+#         self.centralwidget.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+#         self.centralwidget.setObjectName("centralwidget")
+#         self.frame = QtWidgets.QFrame(self.centralwidget)
+#         self.frame.setGeometry(QtCore.QRect(140, 80, 491, 461))
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.frame.setFont(font)
+#         self.frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+#         self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+#         self.frame.setObjectName("frame")
+#         self.label = QtWidgets.QLabel(self.frame)
+#         self.label.setGeometry(QtCore.QRect(180, 70, 151, 41))
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.label.setFont(font)
+#         self.label.setObjectName("label")
+#         self.lineEdit_user = QtWidgets.QLineEdit(self.frame)
+#         self.lineEdit_user.setGeometry(QtCore.QRect(70, 160, 361, 31))
+#         self.lineEdit_user.setText("")
+#         self.lineEdit_user.setObjectName("lineEdit_user")
+#         self.lineEdit_password = QtWidgets.QLineEdit(self.frame)
+#         self.lineEdit_password.setGeometry(QtCore.QRect(70, 260, 361, 31))
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.lineEdit_password.setFont(font)
+#         self.lineEdit_password.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+#         self.lineEdit_password.setLocale(QtCore.QLocale(QtCore.QLocale.Chinese, QtCore.QLocale.China))
+#         self.lineEdit_password.setText("")
+#         self.lineEdit_password.setEchoMode(QtWidgets.QLineEdit.Password)
+#         self.lineEdit_password.setObjectName("lineEdit_password")
+#         self.pushButton = QtWidgets.QPushButton(self.frame)
+#         self.pushButton.setGeometry(QtCore.QRect(30, 370, 421, 51))
+#         palette = QtGui.QPalette()
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(81, 182, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+#         self.pushButton.setPalette(palette)
+#         self.pushButton.setStyleSheet("background-color: rgb(81, 182, 255);\n"
+# "QPalette pal = startBtn.palette(); \n"
+# "pal.setColor(QPalette::ButtonText, Qt::red);\n"
+# "startBtn.setPalette(pal); \n"
+# "startBtn.setStyleSheet(\"background-color:green\"); ")
+#         self.pushButton.setObjectName("pushButton")
+#         self.label_2 = QtWidgets.QLabel(self.frame)
+#         self.label_2.setGeometry(QtCore.QRect(70, 120, 121, 31))
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.label_2.setFont(font)
+#         self.label_2.setObjectName("label_2")
+#         self.label_3 = QtWidgets.QLabel(self.frame)
+#         self.label_3.setGeometry(QtCore.QRect(70, 220, 121, 31))
+#         self.label_3.setObjectName("label_3")
+#         self.toolButton = QtWidgets.QToolButton(self.centralwidget)
+#         self.toolButton.setGeometry(QtCore.QRect(330, 20, 121, 121))
+#         palette = QtGui.QPalette()
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(116, 197, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+#         self.toolButton.setPalette(palette)
+#         self.toolButton.setStyleSheet("background-color: rgb(116, 197, 255);")
+#         self.toolButton.setLocale(QtCore.QLocale(QtCore.QLocale.Chinese, QtCore.QLocale.China))
+#         self.toolButton.setText("")
+#         icon1 = QtGui.QIcon()
+#         icon1.addPixmap(QtGui.QPixmap("../../../../../../pictures/院徽.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+#         self.toolButton.setIcon(icon1)
+#         self.toolButton.setIconSize(QtCore.QSize(150, 150))
+#         self.toolButton.setObjectName("toolButton")
+#         self.forgetPasswd = QtWidgets.QToolButton(self.centralwidget)
+#         self.forgetPasswd.setGeometry(QtCore.QRect(660, 560, 111, 31))
+#         font = QtGui.QFont()
+#         font.setFamily("Century Gothic")
+#         font.setPointSize(-1)
+#         self.forgetPasswd.setFont(font)
+#         self.forgetPasswd.setStyleSheet("border:none;\n"
+# "background:rgba(0,0,0,0.8)\n"
+# "")
+#         self.forgetPasswd.setObjectName("forgetPasswd")
+#         self.label_4 = QtWidgets.QLabel(self.centralwidget)
+#         self.label_4.setGeometry(QtCore.QRect(660, 560, 121, 31))
+#         palette = QtGui.QPalette()
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.WindowText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.ButtonText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.LinkVisited, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.WindowText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.ButtonText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.LinkVisited, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.ButtonText, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+#         brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
+#         brush.setStyle(QtCore.Qt.SolidPattern)
+#         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.LinkVisited, brush)
+#         self.label_4.setPalette(palette)
+#         self.label_4.setObjectName("label_4")
+#         MainWindow.setCentralWidget(self.centralwidget)
+#
+#         self.retranslateUi(MainWindow)
+#         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+#
+#     def retranslateUi(self, MainWindow):
+#         _translate = QtCore.QCoreApplication.translate
+#         MainWindow.setWindowTitle(_translate("MainWindow", "浙商大招待所"))
+#         self.label.setText(_translate("MainWindow", "Now Login！"))
+#         self.lineEdit_user.setPlaceholderText(_translate("MainWindow", "username"))
+#         self.lineEdit_password.setPlaceholderText(_translate("MainWindow", "password"))
+#         self.pushButton.setText(_translate("MainWindow", "登 录"))
+#         self.label_2.setText(_translate("MainWindow", "账户名"))
+#         self.label_3.setText(_translate("MainWindow", "密码"))
+#         self.forgetPasswd.setText(_translate("MainWindow", "忘记密码"))
+#         self.label_4.setText(_translate("MainWindow", "忘记密码？"))#登录页
+
 class Ui_LoginWindow(object):
     def setupUi(self, MainWindow):
-        MainWindow.setObjectName("浙商大招待所")
+        MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 600)
         font = QtGui.QFont()
         font.setFamily("Century Gothic")
         font.setPointSize(-1)
         MainWindow.setFont(font)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../../../../../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("../../../../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setStyleSheet("\n"
 "*{\n"
@@ -901,84 +1312,9 @@ class Ui_LoginWindow(object):
         self.toolButton.setIcon(icon1)
         self.toolButton.setIconSize(QtCore.QSize(150, 150))
         self.toolButton.setObjectName("toolButton")
-        self.forgetPasswd = QtWidgets.QToolButton(self.centralwidget)
-        self.forgetPasswd.setGeometry(QtCore.QRect(660, 560, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("Century Gothic")
-        font.setPointSize(-1)
-        self.forgetPasswd.setFont(font)
-        self.forgetPasswd.setStyleSheet("border:none;\n"
-"background:rgba(0,0,0,0.8)\n"
-"")
+        self.forgetPasswd = QtWidgets.QPushButton(self.centralwidget)
+        self.forgetPasswd.setGeometry(QtCore.QRect(660, 550, 121, 31))
         self.forgetPasswd.setObjectName("forgetPasswd")
-        self.label_4 = QtWidgets.QLabel(self.centralwidget)
-        self.label_4.setGeometry(QtCore.QRect(660, 560, 121, 31))
-        palette = QtGui.QPalette()
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.WindowText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.ButtonText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
-        brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.LinkVisited, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.WindowText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.ButtonText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
-        brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.LinkVisited, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
-        brush = QtGui.QBrush(QtGui.QColor(255, 255, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.ButtonText, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
-        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
-        brush = QtGui.QBrush(QtGui.QColor(57, 209, 255))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.LinkVisited, brush)
-        self.label_4.setPalette(palette)
-        self.label_4.setObjectName("label_4")
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
@@ -993,8 +1329,9 @@ class Ui_LoginWindow(object):
         self.pushButton.setText(_translate("MainWindow", "登 录"))
         self.label_2.setText(_translate("MainWindow", "账户名"))
         self.label_3.setText(_translate("MainWindow", "密码"))
-        self.forgetPasswd.setText(_translate("MainWindow", "忘记密码"))
-        self.label_4.setText(_translate("MainWindow", "忘记密码？"))#登录页
+        self.forgetPasswd.setText(_translate("MainWindow", "忘记密码？"))
+
+
 class Ui_HomeWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("浙商大招待所")
@@ -1297,10 +1634,13 @@ class HomePage(QMainWindow, Ui_HomeWindow):
         """
         super(HomePage, self).__init__(parent)
         self.setupUi(self)
+        # get_staff() 是一个 全局函数，返回当前登录的 Staff 对象。
+        # self.staff.sname[0]：获取 员工名字的第一个字符，用于显示欢迎信息。
         self.staff = get_staff()
         print(self.staff.sname[0])
         self.welcome.setText(self.staff.sname + ',你好。你的权限为：' + self.staff.srole + '。今天是' + time.strftime("%Y-%m-%d", time.localtime()))
         #绑定按钮，括号内都是跳转的方法
+        # 多个按钮都 绑定了槽函数
         self.staffbutton.clicked.connect(self.gotoStaff)
         self.roombutton.clicked.connect(self.gotoRoom)
         # self.clientbutton.clicked.connect(self.gotoClient)
@@ -1779,11 +2119,15 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def __init__(self, parent=None):
         super(StaffOP, self).__init__(parent)
         self.setupUi(self)
+        # 让日期选择器弹出一个日历窗口，让用户可以方便地选择日期
         self.inputdate.setCalendarPopup(True)
+        # 默认显示第一个子页面
         self.stackedWidget.setCurrentIndex(0)
+        # 绑定用户信息
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+
         self.name.setText(self.staff.sname)
         self.sname.setText(self.staff.sname)
         self.ssex.setText(self.staff.ssex)
@@ -1792,9 +2136,15 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
         self.sphone.setText(self.staff.sphone)
         self.sidcard.setText(self.staff.sidcard)
         self.sidcard_2.setText(self.staff.sid)
+
+        # 列表组件设置
+        # listWidget 允许 点击不同选项，切换到不同的页面（通常结合 QStackedWidget 使用）。
+        # currentRowChanged 信号：当用户点击 listWidget 里的某一项时，会触发这个信号，返回当前选中的行索引。
+        # setCurrentIndex()：这个方法用于 切换 QStackedWidget 的页面。
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         # 绑定事件
         self.searchNB.clicked.connect(self.searchStaff)
         self.commitAdd.clicked.connect(self.addStaff)
@@ -1805,6 +2155,9 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def searchStaff(self):
         sname = str(self.searchName.text())
         s_sname = '%' + sname + '%'
+        # self.staff.srole 代表 当前用户的权限：
+        # 1 代表普通员工，无权查询。
+        # 2 代表管理员，允许查询。
         if int(self.staff.srole) > 1:
             self.data = self.staff.showAllStaff(s_sname)
             # print(self.data)
@@ -1812,6 +2165,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             self.columnNum = len(self.data[0])
             print(self.rowNum)
             print(self.columnNum)
+            # 更新 QTableWidget
             self.searchTable.setRowCount(self.rowNum)
             self.searchTable.setColumnCount(self.columnNum)
             for i, da in enumerate(self.data):
@@ -1826,6 +2180,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def addStaff(self):
         sid = self.inputsid.text().split()
         sname = self.inputname.text().split()
+        # self.inputmale.isChecked() 检测 性别选择按钮是否被选中。
         if self.inputmale.isChecked():
             ssex = '男'
         elif self.inputfemale.isChecked():
@@ -1843,6 +2198,7 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "信息不能为空！", QMessageBox.Yes)
             return False
         if int(self.staff.srole) > 1:
+            # 调用Staff类实例的方法
             ret = self.staff.addStaff(sid,sname,ssex,stime,susername,spwd,srole,sidcard,sphone)
             if ret:
                 QMessageBox().information(None, "提示", "添加成功！", QMessageBox.Yes)
@@ -1850,23 +2206,35 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "权限不符合要求！", QMessageBox.Yes)
 
     def deleteStaff(self):
+        """
+        根据用户在输入框中的输入，来删除员工。
+        """
         sid = self.desid.text()
         sname = self.dename.text()
         sidcard = self.deidcard.text()
+        # 数据校验：检验是否有空值
         if sid == '' or sname == '' or sidcard == '':
+            # 参数1： None 代表没有指定父窗口（可以改为 self）。
+            # 参数2： "提示" 是消息框标题。
+            # 参数3： "信息不能为空！" 是提示内容。
+            # 参数4： QMessageBox.Yes 代表 确定按钮。
             QMessageBox().information(None, "提示", "信息不能为空！", QMessageBox.Yes)
             return False
         if int(self.staff.srole) > 1:
             self.staff.deleteStaff(sid,sname,sidcard)
+            # showAllStaff('%%') 查询所有员工信息，'%%' 是 SQL LIKE 语法的通配符，代表 查询所有员工。
             self.data = self.staff.showAllStaff('%%')
             print(self.data)
             self.rowNum = len(self.data)
             self.columnNum = len(self.data[0])
             self.deleteTable.setRowCount(self.rowNum)
             self.deleteTable.setColumnCount(self.columnNum)
+            # data可能是一个列表，每个值是一个员工的字典。
+            # enumerate(self.data) 让 i 代表 行索引，da 代表 员工数据（字典）。
             for i, da in enumerate(self.data):
                 # 字典转列表
                 da = list(da.values())
+                # 遍历一个员工数据字典的每个字段。
                 for j in range(self.columnNum):
                     self.itemContent = QTableWidgetItem(( '%s' )  % (da[j]))
                     self.deleteTable.setItem(i, j, self.itemContent)
@@ -1875,22 +2243,36 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
             QMessageBox().information(None, "提示", "权限不符合要求！", QMessageBox.Yes)
 
     def tableDel(self):
+        """
+        从表格中获取要删除的员工，并删除
+        """
+        # 获取选中的表格行
         row_selected = self.searchTable.selectedItems()
         if len(row_selected) == 0:
             return
+        # 获取选中行的 第一个单元格的内容（通常是 员工ID）。
         row = row_selected[0].text()
+        # 调用 delStaff() 方法，删除该员工。
         self.staff.delStaff(row)
+        # 获取选中行的索引。
         row = row_selected[0].row()
+        # 从 QTableWidget 中删除该行。
         self.searchTable.removeRow(row)
         QMessageBox().information(None, "提示", "删除成功！", QMessageBox.Yes)
 
     def tableModify(self):
+        """
+
+        """
         row_selected = self.searchTable.selectedItems()
         if len(row_selected) == 0:
             return
+        # 获取当前选中的行索引。这里的行索引是什么？
         row = row_selected[0].row()
         column  = row_selected[0].column()
+        # 获取 用户输入的新值。
         value = self.modifyvalue.text()
+        # 调用 modifyStaff() 更新数据库中的员工信息。
         self.staff.modifyStaff(row,column,value)
         tvalue = QTableWidgetItem(('%s') % (value))
         self.searchTable.setItem(row,column, tvalue)
