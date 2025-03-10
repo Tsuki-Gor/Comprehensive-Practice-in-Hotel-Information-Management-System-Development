@@ -15,7 +15,7 @@ localConfig = {
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -65,7 +65,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -1140,7 +1140,7 @@ class Figure_Canvas(FigureCanvas):
 #         self.forgetPasswd.setText(_translate("MainWindow", "忘记密码"))
 #         self.label_4.setText(_translate("MainWindow", "忘记密码？"))#登录页
 
-class Ui_LoginWindow(object):
+'''class Ui_LoginWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 600)
@@ -1329,44 +1329,256 @@ class Ui_LoginWindow(object):
         self.pushButton.setText(_translate("MainWindow", "登 录"))
         self.label_2.setText(_translate("MainWindow", "账户名"))
         self.label_3.setText(_translate("MainWindow", "密码"))
+        self.forgetPasswd.setText(_translate("MainWindow", "忘记密码？"))'''
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+
+class Ui_LoginWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(800, 600)
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        MainWindow.setFont(font)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("references/pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        MainWindow.setWindowIcon(icon)
+        MainWindow.setStyleSheet("\n"
+"*{\n"
+"font-size:24px;\n"
+"font-family:Century Gothic;\n"
+"}\n"
+"QFrame{\n"
+"background:rgba(0,0,0,0.8);\n"
+"border-radius:15px;\n"
+"}\n"
+"#centralwidget{\n"
+"border-image:url(D:/pictures/login4.jpg) strectch；\n"
+"}\n"
+"\n"
+"#toolButton{\n"
+"background:red;\n"
+"border-radius:60px;\n"
+"}\n"
+"QLabel{\n"
+"color:white;\n"
+"background:transparent;\n"
+"}\n"
+"QPushButton{\n"
+"background:red;;\n"
+"border-radius:15px;\n"
+"}\n"
+"QPushButton:hover{\n"
+"background:#333;\n"
+"border-radius:15px;\n"
+"background:#49ebff;\n"
+"}\n"
+"QLineEdit{\n"
+"background:transparent;\n"
+"border:none;\n"
+"color:#717072;\n"
+"border-bottom:1px solid #717072;\n"
+"}")
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        self.centralwidget.setFont(font)
+        self.centralwidget.setFocusPolicy(QtCore.Qt.WheelFocus)
+        self.centralwidget.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+        self.centralwidget.setObjectName("centralwidget")
+        self.frame = QtWidgets.QFrame(self.centralwidget)
+        self.frame.setGeometry(QtCore.QRect(130, 80, 501, 461))
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        self.frame.setFont(font)
+        self.frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame.setObjectName("frame")
+        self.label = QtWidgets.QLabel(self.frame)
+        self.label.setGeometry(QtCore.QRect(180, 70, 151, 41))
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.lineEdit_user = QtWidgets.QLineEdit(self.frame)
+        self.lineEdit_user.setGeometry(QtCore.QRect(70, 160, 361, 31))
+        self.lineEdit_user.setText("")
+        self.lineEdit_user.setObjectName("lineEdit_user")
+        self.lineEdit_password = QtWidgets.QLineEdit(self.frame)
+        self.lineEdit_password.setGeometry(QtCore.QRect(70, 260, 361, 31))
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        self.lineEdit_password.setFont(font)
+        self.lineEdit_password.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+        self.lineEdit_password.setLocale(QtCore.QLocale(QtCore.QLocale.Chinese, QtCore.QLocale.China))
+        self.lineEdit_password.setText("")
+        self.lineEdit_password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.lineEdit_password.setObjectName("lineEdit_password")
+        self.pushButton = QtWidgets.QPushButton(self.frame)
+        self.pushButton.setGeometry(QtCore.QRect(30, 370, 421, 51))
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+        self.pushButton.setPalette(palette)
+        self.pushButton.setStyleSheet("background-color: rgb(85, 170, 255);\n"
+"QPalette pal = startBtn.palette(); \n"
+"pal.setColor(QPalette::ButtonText, Qt::red);\n"
+"startBtn.setPalette(pal); \n"
+"startBtn.setStyleSheet(\"background-color:rgb(85, 255, 127)en\"); ")
+        self.pushButton.setObjectName("pushButton")
+        self.label_2 = QtWidgets.QLabel(self.frame)
+        self.label_2.setGeometry(QtCore.QRect(70, 120, 121, 31))
+        font = QtGui.QFont()
+        font.setFamily("Century Gothic")
+        font.setPointSize(-1)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.label_3 = QtWidgets.QLabel(self.frame)
+        self.label_3.setGeometry(QtCore.QRect(70, 220, 121, 31))
+        self.label_3.setObjectName("label_3")
+        self.toolButton = QtWidgets.QToolButton(self.centralwidget)
+        self.toolButton.setGeometry(QtCore.QRect(310, 20, 121, 121))
+        palette = QtGui.QPalette()
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Window, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Button, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Base, brush)
+        brush = QtGui.QBrush(QtGui.QColor(85, 170, 255))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
+        self.toolButton.setPalette(palette)
+        self.toolButton.setStyleSheet("background-color: rgb(85, 170, 255);")
+        self.toolButton.setLocale(QtCore.QLocale(QtCore.QLocale.Chinese, QtCore.QLocale.China))
+        self.toolButton.setText("")
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap("references/pictures/ii.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.toolButton.setIcon(icon1)
+        self.toolButton.setIconSize(QtCore.QSize(150, 150))
+        self.toolButton.setObjectName("toolButton")
+        self.forgetPasswd = QtWidgets.QPushButton(self.centralwidget)
+        self.forgetPasswd.setGeometry(QtCore.QRect(660, 550, 121, 31))
+        self.forgetPasswd.setObjectName("forgetPasswd")
+        self.label_4 = QtWidgets.QLabel(self.centralwidget)
+        self.label_4.setGeometry(QtCore.QRect(0, 0, 801, 601))
+        self.label_4.setText("")
+        self.label_4.setPixmap(QtGui.QPixmap("references/pictures/bg.png"))
+        self.label_4.setScaledContents(True)
+        self.label_4.setObjectName("label_4")
+        self.label_4.raise_()
+        self.frame.raise_()
+        self.toolButton.raise_()
+        self.forgetPasswd.raise_()
+        MainWindow.setCentralWidget(self.centralwidget)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "友谊会馆"))
+        self.label.setText(_translate("MainWindow", "Now Login！"))
+        self.lineEdit_user.setPlaceholderText(_translate("MainWindow", "username"))
+        self.lineEdit_password.setPlaceholderText(_translate("MainWindow", "password"))
+        self.pushButton.setText(_translate("MainWindow", "登 录"))
+        self.label_2.setText(_translate("MainWindow", "账户名"))
+        self.label_3.setText(_translate("MainWindow", "密码"))
         self.forgetPasswd.setText(_translate("MainWindow", "忘记密码？"))
+
+
+
 
 
 class Ui_HomeWindow(object):
     def setupUi(self, MainWindow):
-        MainWindow.setObjectName("浙商大招待所")
+        MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 600)
         MainWindow.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("references/pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
-        MainWindow.setStyleSheet("QMainWindow{\n"
-"border-radius:15px\n"
-"}\n"
-"QWidget{\n"
-"border-radius:15px;\n"
-"}\n"
-"#frame{\n"
-"background: #e1e9ed;}\n"
-"QToolButton{\n"
-"background:#EAF7FF;\n"
-"border-radius:15px;\n"
-"}\n"
-"QToolButton:hover{\n"
-"background:#EAF7FF;\n"
-"border-radius:15px;\n"
-"background:#49ebff;\n"
-"}\n"
-"#label{\n"
-"text-align:center;\n"
-"}\n"
-"#welcome{\n"
-"text-align:center;\n"
-"}\n"
-"#toolButton_7\n"
-"{\n"
-"background:#e1e9ed;\n"
-"}")
+        MainWindow.setStyleSheet("\n"
+"  QToolButton {\n"
+"    background: #EAF7FF;\n"
+"    border-radius: 15px;\n"
+"    border: 1px solid #a0c0d0;  /* 添加边框 */\n"
+"    padding: 8px;  /* 内边距 */\n"
+"    font-size: 14px;\n"
+"    font-weight: bold;\n"
+"    transition: all 0.3s ease;  /* 平滑过渡 */\n"
+"  }\n"
+"\n"
+"  QToolButton:hover {\n"
+"    background: #49ebff;\n"
+"    border-color: #30a0c0;\n"
+"    box-shadow: 0 4px 12px rgba(73, 235, 255, 0.3);  /* 悬浮阴影 */\n"
+"  }\n"
+"\n"
+"  QToolButton:pressed {\n"
+"    background: #30a0c0;\n"
+"    transform: translateY(2px);  /* 按下下沉效果 */\n"
+"  }\n"
+"\n"
+"  /* 单独调整图标按钮样式 */\n"
+"  #toolButton_7 {\n"
+"    background: transparent;  /* 透明背景 */\n"
+"    border: none;\n"
+"    icon-size: 80px;  /* 放大图标 */\n"
+"  }\n"
+" ")
         MainWindow.setTabShape(QtWidgets.QTabWidget.Rounded)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -1375,11 +1587,12 @@ class Ui_HomeWindow(object):
         self.chartbutton.setMinimumSize(QtCore.QSize(200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
+        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.chartbutton.setFont(font)
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("../../../../pictures/chart.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("references/pictures/chart.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.chartbutton.setIcon(icon1)
         self.chartbutton.setIconSize(QtCore.QSize(70, 70))
         self.chartbutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
@@ -1388,13 +1601,16 @@ class Ui_HomeWindow(object):
         self.roombutton.setGeometry(QtCore.QRect(40, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
+        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.roombutton.setFont(font)
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap("../../../../pictures/coffee.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap("references/pictures/room.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.roombutton.setIcon(icon2)
-        self.roombutton.setIconSize(QtCore.QSize(80, 80))
+        self.roombutton.setIconSize(QtCore.QSize(50, 50))
+        self.roombutton.setCheckable(False)
+        self.roombutton.setChecked(False)
         self.roombutton.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.roombutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.roombutton.setObjectName("roombutton")
@@ -1402,13 +1618,14 @@ class Ui_HomeWindow(object):
         self.staffbutton.setGeometry(QtCore.QRect(290, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
+        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.staffbutton.setFont(font)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap("../../../../pictures/staff.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap("references/pictures/employee.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.staffbutton.setIcon(icon3)
-        self.staffbutton.setIconSize(QtCore.QSize(80, 80))
+        self.staffbutton.setIconSize(QtCore.QSize(55, 55))
         self.staffbutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.staffbutton.setObjectName("staffbutton")
         self.frame = QtWidgets.QFrame(self.centralwidget)
@@ -1428,18 +1645,32 @@ class Ui_HomeWindow(object):
         self.toolButton_7 = QtWidgets.QToolButton(self.frame)
         self.toolButton_7.setGeometry(QtCore.QRect(370, 70, 71, 71))
         font = QtGui.QFont()
-        font.setPointSize(9)
+        font.setPointSize(-1)
+        font.setBold(True)
+        font.setWeight(75)
         self.toolButton_7.setFont(font)
         self.toolButton_7.setText("")
         icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap("../../../../pictures/hotel.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon4.addPixmap(QtGui.QPixmap("../../../pictures/hotel.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_7.setIcon(icon4)
         self.toolButton_7.setIconSize(QtCore.QSize(100, 100))
         self.toolButton_7.setObjectName("toolButton_7")
         self.modifyPwd = QtWidgets.QToolButton(self.frame)
-        self.modifyPwd.setGeometry(QtCore.QRect(710, 150, 81, 21))
-        self.modifyPwd.setStyleSheet("background:#e1e9ed")
+        self.modifyPwd.setGeometry(QtCore.QRect(710, 130, 81, 31))
+        self.modifyPwd.setStyleSheet("\n"
+"    background: rgba(225,233,237,0.8);\n"
+"    color: #2980b9;\n"
+"    border-radius: 10px;\n"
+"    border: 1px solid #a0c0d0;\n"
+"    padding: 2px 8px;\n"
+"   ")
         self.modifyPwd.setObjectName("modifyPwd")
+        self.label_3 = QtWidgets.QLabel(self.frame)
+        self.label_3.setGeometry(QtCore.QRect(0, 170, 801, 16))
+        self.label_3.setText("")
+        self.label_3.setPixmap(QtGui.QPixmap("references/pictures/line.png"))
+        self.label_3.setScaledContents(True)
+        self.label_3.setObjectName("label_3")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(310, 540, 181, 41))
         palette = QtGui.QPalette()
@@ -1488,6 +1719,9 @@ class Ui_HomeWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.ToolTipText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(195, 210, 217))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.WindowText, brush)
@@ -1533,6 +1767,9 @@ class Ui_HomeWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.ToolTipText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(97, 105, 108))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
@@ -1578,11 +1815,26 @@ class Ui_HomeWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.ToolTipText, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.PlaceholderText, brush)
         self.label.setPalette(palette)
         font = QtGui.QFont()
         font.setFamily("幼圆")
         self.label.setFont(font)
         self.label.setObjectName("label")
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setGeometry(QtCore.QRect(0, 0, 801, 601))
+        self.label_2.setText("")
+        self.label_2.setPixmap(QtGui.QPixmap("references/pictures/home_bg.png"))
+        self.label_2.setScaledContents(True)
+        self.label_2.setObjectName("label_2")
+        self.label_2.raise_()
+        self.chartbutton.raise_()
+        self.roombutton.raise_()
+        self.staffbutton.raise_()
+        self.frame.raise_()
+        self.label.raise_()
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
@@ -1590,7 +1842,7 @@ class Ui_HomeWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "浙商大招待所"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "友谊会馆"))
         self.chartbutton.setText(_translate("MainWindow", "维护与报表"))
         self.roombutton.setText(_translate("MainWindow", "客房管理"))
         self.staffbutton.setText(_translate("MainWindow", "员工管理"))
