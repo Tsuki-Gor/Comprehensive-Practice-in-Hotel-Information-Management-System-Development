@@ -111,6 +111,7 @@ class Staff:
         self.stime = None
         self.sidcard = None
         self.sphone = None
+        self.image=None
 
     def userLogin(self, username, password):
         """
@@ -139,6 +140,7 @@ class Staff:
                     self.srole = row['srole']
                     self.sidcard = row['sidcard']
                     self.sphone = row['sphone']
+                    self.image=row['image']
                     return row['srole']
         except Exception as e:
             print(e)
@@ -1333,7 +1335,6 @@ class Figure_Canvas(FigureCanvas):
 
 
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 
@@ -2055,6 +2056,25 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         self.staff = get_staff()
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
+        #加载头像
+        if self.staff.image:  # 确保 staff.image 不是 None
+            pixmap = QPixmap()
+            if pixmap.loadFromData(self.staff.image):  # 从数据库的 BLOB 加载数据
+                # 确保 head 是 QToolButton
+                if isinstance(self.head, QToolButton):
+                    icon = QIcon(pixmap)
+                    self.head.setIcon(icon)
+
+                    # 调整按钮的 iconSize，使其适配头像
+                    button_size = self.head.size()  # 获取按钮大小
+                    self.head.setIconSize(button_size)  # 让头像匹配按钮尺寸
+                else:
+                    print("head 组件类型未知，无法设置图片")
+            else:
+                print("头像加载失败：数据格式错误")
+        else:
+            print("未找到头像数据")
+
 
         self.listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
