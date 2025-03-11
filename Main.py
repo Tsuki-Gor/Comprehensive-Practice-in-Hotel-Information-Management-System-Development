@@ -15,7 +15,9 @@ localConfig = {
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    # 数据库用户名
+    'passwd': 'Tsuki',
+    # 数据库密码
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -59,13 +61,15 @@ from ui.room import Ui_RoomWindow
 # 重复导入 datetime 模块，建议删除重复导入
 import datetime
 
+from collections import defaultdict
+
 import re
 
 localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': 'Tsuki',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -290,12 +294,53 @@ class Staff:
             print(e)
             return False
 
-    def modifyStaff(self, row, column, value):
+    # def modifyStaff(self, row, column, value):
+    #     """
+    #     修改员工信息。
+    #
+    #     参数：
+    #         row (int): 需要修改的员工在查询结果中的行索引
+    #         column (int): 需要修改的列索引
+    #         value (str): 新值
+    #
+    #     返回：
+    #         bool: 修改成功返回 True，失败返回 False
+    #
+    #     说明：
+    #         - 该方法通过 SQL_COLUMN 列表定位数据库字段
+    #         - row 表示要修改的员工位置
+    #         - column 对应需要修改的字段索引
+    #     """
+    #     # 这个列表存储了 staff 表的列名，用于匹配 column 参数。
+    #     SQL_COLUMN = ['sid','sname','ssex','stime','susername','spassword','srole','sidcard','sphone']
+    #     try:
+    #         self.cursor.execute("select * from staff")
+    #         data = self.cursor.fetchall()
+    #
+    #
+    #         # 这里有严重错误
+    #         # rid_selected = data[row]['rid']
+    #         # sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
+    #         # self.cursor.execute(sql)
+    #
+    #         sid_selected =  data[row]['sid']
+    #         sql = "update staff set " + SQL_COLUMN[column] + " = %s where sid = %s"
+    #         self.cursor.execute(sql,(value,sid_selected))
+    #
+    #
+    #
+    #         self.db.commit()
+    #         return True
+    #     except Exception as e:
+    #         print(e)
+    #         return False
+
+    def modifyStaff_2(self, sid, column, value):
         """
-        修改员工信息。
+        修改员工信息,新版,根据sid而不是row。
 
         参数：
-            row (int): 需要修改的员工在查询结果中的行索引
+            sid (str): 员工ID
             column (int): 需要修改的列索引
             value (str): 新值
 
@@ -319,7 +364,10 @@ class Staff:
             # sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
             # self.cursor.execute(sql)
 
-            sid_selected =  data[row]['sid']
+
+
+            # sid_selected =  data[row]['sid']
+            sid_selected = sid
             sql = "update staff set " + SQL_COLUMN[column] + " = %s where sid = %s"
             self.cursor.execute(sql,(value,sid_selected))
 
@@ -330,6 +378,7 @@ class Staff:
         except Exception as e:
             print(e)
             return False
+
 class Room:
     """客房信息操作类"""
     def __init__(self,config=localConfig):
@@ -340,15 +389,36 @@ class Room:
         self.cursor.execute("SELECT VERSION()")
         data = self.cursor.fetchone()
         print("Database version : %s " % data['VERSION()'])
+        # 获取全局的staff对象
         self.staff = get_staff()
 
     def showAllRoom(self):
+        """
+        显示所有房间信息。
+        返回：
+            list: 查询到的房间信息列表
+        """
         self.cursor.execute("select * from room")
         data = self.cursor.fetchall()
         return data
 
     def showRoom(self,rtype,rstate,rstorey,rstarttime,rendtime,price_bottom,price_up):
-        """根据条件检索房间"""
+        """
+        根据条件检索房间
+
+        LIKE %s 是 SQL 模糊查询，用于匹配部分字符串。
+        BETWEEN %s AND %s 用于指定价格范围，查询 rprice 介于 price_bottom 和 price_up 之间的房间。
+
+        检查 rstate
+
+        rstate == 0：查询所有符合条件的房间（无入住约束）。
+        rstate == 1：进一步过滤掉已被入住或预订的房间。
+        SQL 语句
+
+        rtype LIKE %s：匹配房间类型，如 "豪华双人间"。
+        rstorey LIKE %s：匹配楼层，如 "3楼" 。
+        rprice BETWEEN %s AND %s：匹配价格区间。
+        """
         print(rstarttime, rendtime)
         if rstate == 0:
             self.cursor.execute("select * from room where rtype like %s and rstorey like %s and rprice between %s and %s",
@@ -356,12 +426,14 @@ class Room:
             data1 = self.cursor.fetchall()
             return data1
         elif rstate == 1:
+            # 查找符合条件的房间 rid。查找 rtype、rstorey 和 rprice 符合的房间 ID。data[i]['rid'] 获取每个房间编号。
             self.cursor.execute(
                 "select rid from room where rtype like %s and rstorey like %s and rprice between %s and %s",
                 (rtype, rstorey, int(price_bottom), int(price_up)))
             data = self.cursor.fetchall()
             list_data = []
             for i in range(len(data)):
+                # 过滤掉已被入住的房间
                 crid = data[i]['rid']
                 self.cursor.execute(
                     "select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
@@ -383,9 +455,12 @@ class Room:
                     "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
                     , (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime,rstarttime,rendtime))
                 data4 = self.cursor.fetchall()
+                # 如果所有 data1, data2, data3, data4 为空，说明房间没有被占用，则添加到 list_data。
                 if data1 == () and data2 == () and data3 == () and data4 == ():
                     list_data.append(crid)
             ret = []
+            # 查询符合条件的房间详细信息：
+            # 逐个查询 room 表，获取完整房间信息。最终返回 ret 结果。
             for i in range(len(list_data)):
                 rid_ret = list_data[i]
                 self.cursor.execute("select * from room where rid=%s",(rid_ret))
@@ -393,7 +468,14 @@ class Room:
             return ret
 
     def addRoom(self,rid,rtype,rstorey,rprice,rdesc,rpic):
-        """增加房间"""
+        """
+        增加房间
+
+        避免主键冲突：如果 rid 已存在，插入会失败，提示 "房间号已存在"。
+        改进建议
+        增加字段校验（确保 rprice 为数值）。
+        增加事务回滚（rollback()）防止数据库异常后部分写入。
+        """
         try:
             self.cursor.execute("insert into room values(%s,%s,%s,%s,%s,%s)",(rid,rtype,rstorey,rprice,rdesc,rpic))
             self.db.commit()
@@ -404,7 +486,12 @@ class Room:
             return False
 
     def delRoom(self,rid):
-        """表格上直接删除"""
+        """
+        表格上直接删除
+
+        改进建议
+        检查是否有入住或预订记录
+        """
         try:
             self.cursor.execute("delete from room where rid=%s",(rid))
             self.db.commit()
@@ -414,7 +501,12 @@ class Room:
             return False
 
     def modifyRoom(self, row, column, value):
-        """表格上直接修改"""
+        """
+        表格上直接修改
+
+        改进建议
+        增加字段校验，例如价格必须是数字
+        """
         # 字典方法得到要修改的列
         SQL_COLUMN = ['rid','rtype','rstorey','rprice','rdesc']
         try:
@@ -430,7 +522,17 @@ class Room:
             return False
 
     def singleCheckinDB(self,cname,cid,cphone,cage,csex,crid,cendtime,remark):
-        """个人入住"""
+        """
+        个人入住
+
+        1.预订信息检测：检查 checkin_client、checkin_team、booking_client、booking_team 是否有冲突。如果有冲突，提示房间已被占用。
+        2.计算入住费用：查询房间价格，计算总价，int((cendtime - starttime).days) 计算入住天数。
+
+        改进建议
+        使用 EXISTS 提高查询性能
+        使用 ON DUPLICATE KEY UPDATE 避免重复入住
+
+        """
         # 查询预定表和入住表，判断该房间是否能租出去
         starttime = datetime.date.today()
         self.cursor.execute("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
@@ -697,52 +799,129 @@ class Room:
             print(e)
             return False
 
-    def checkoutDB(self,flag, id,rid,payType,remark):
-        """两种方式退房"""
+    # def checkoutDB(self,flag, id,rid,payType,remark):
+    #     """两种方式退房"""
+    #     try:
+    #         if flag == '个人':
+    #             self.cursor.execute("select * from checkin_client where rid=%s and cid=%s",(rid,id))
+    #             data = self.cursor.fetchall()
+    #             if data == ():
+    #                 QMessageBox().information(None, "提示", "没有相关入住信息！", QMessageBox.Yes)
+    #                 return False
+    #             else:
+    #                 rid_out = data[0]['rid']
+    #                 cid_out = data[0]['cid']
+    #                 stime_out = data[0]['start_time']
+    #                 etime_out = data[0]['end_time']
+    #                 money = data[0]['total_price']
+    #                 self.cursor.execute("insert into hotelorder(id,ordertype,start_time,end_time,rid,pay_type,money,remark,register_sid) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+    #                                     (cid_out,flag,stime_out,etime_out,rid_out,payType,money,remark,self.staff.sid))
+    #                 self.cursor.execute("delete from checkin_client where rid=%s and cid=%s",(rid_out,cid_out))
+    #                 self.db.commit()
+    #                 QMessageBox().information(None, "提示", "本次需要支付%s" %money, QMessageBox.Yes)
+    #         elif flag == '团队':
+    #             sum = 0
+    #             for r in re.split(',|，| ',rid):
+    #                 self.cursor.execute(
+    #                     "select * from checkin_team where rid=%s and tid=%s", (r, id))
+    #                 data = self.cursor.fetchall()
+    #                 if data == ():
+    #                     QMessageBox().information(None, "提示", "没有相关入住信息！", QMessageBox.Yes)
+    #                     return False
+    #                 else:
+    #                     rid_out = data[0]['rid']
+    #                     tid_out = data[0]['tid']
+    #                     stime_out = data[0]['start_time']
+    #                     etime_out = data[0]['end_time']
+    #                     money = data[0]['total_price']
+    #                     self.cursor.execute(
+    #                         "insert into hotelorder(id,ordertype,start_time,end_time,rid,pay_type,money,remark,register_sid) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    #                         , (tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark,self.staff.sid))
+    #                     self.cursor.execute("delete from checkin_team where rid=%s and tid=%s", (rid_out, tid_out))
+    #                     self.db.commit()
+    #                     sum = sum + int(money)
+    #             QMessageBox().information(None, "提示", "本次需要支付%s" %str(sum), QMessageBox.Yes)
+    #         return True
+    #     except Exception as e:
+    #         print(e)
+    #         return False
+
+    def checkoutDB(self, flag, id, rid, payType, remark):
+        """
+        退房操作（个人 / 团队）修改版
+
+        回滚事务 (rollback())：
+        避免数据损坏：如果插入订单失败但删除入住记录成功，数据会不一致（订单丢失但客户已退房）。
+        遇到 数据库异常（如外键约束失败、断网）时，数据回滚到 操作前的状态。
+
+        """
         try:
             if flag == '个人':
-                self.cursor.execute("select * from checkin_client where rid=%s and cid=%s",(rid,id))
-                data = self.cursor.fetchall()
-                if data == ():
+                # 查询入住信息
+                self.cursor.execute("SELECT * FROM checkin_client WHERE rid=%s AND cid=%s", (rid, id))
+                data = self.cursor.fetchone()
+
+                if not data:
                     QMessageBox().information(None, "提示", "没有相关入住信息！", QMessageBox.Yes)
                     return False
-                else:
-                    rid_out = data[0]['rid']
-                    cid_out = data[0]['cid']
-                    stime_out = data[0]['start_time']
-                    etime_out = data[0]['end_time']
-                    money = data[0]['total_price']
-                    self.cursor.execute("insert into hotelorder(id,ordertype,start_time,end_time,rid,pay_type,money,remark,register_sid) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                                        (cid_out,flag,stime_out,etime_out,rid_out,payType,money,remark,self.staff.sid))
-                    self.cursor.execute("delete from checkin_client where rid=%s and cid=%s",(rid_out,cid_out))
-                    self.db.commit()
-                    QMessageBox().information(None, "提示", "本次需要支付%s" %money, QMessageBox.Yes)
+
+                # 提取数据
+                rid_out, cid_out, stime_out, etime_out, money = data['rid'], data['cid'], data['start_time'], data[
+                    'end_time'], data['total_price']
+
+                # 插入新订单到 hotelorder_v1
+                self.cursor.execute("""
+                    INSERT INTO hotelorder_v1 (id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
+                """, (cid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
+
+                # 删除入住记录
+                self.cursor.execute("DELETE FROM checkin_client WHERE rid=%s AND cid=%s", (rid_out, cid_out))
+
+                # 提交事务
+                self.db.commit()
+
+                QMessageBox().information(None, "提示", f"本次需要支付 {money}，订单已生成！", QMessageBox.Yes)
+
             elif flag == '团队':
-                sum = 0
-                for r in re.split(',|，| ',rid):
-                    self.cursor.execute(
-                        "select * from checkin_team where rid=%s and tid=%s", (r, id))
-                    data = self.cursor.fetchall()
-                    if data == ():
-                        QMessageBox().information(None, "提示", "没有相关入住信息！", QMessageBox.Yes)
+                total_sum = 0
+                rooms = rid.split(",")  # 支持多个房间退房
+
+                for room_id in rooms:
+                    # 查询入住信息
+                    self.cursor.execute("SELECT * FROM checkin_team WHERE rid=%s AND tid=%s", (room_id.strip(), id))
+                    data = self.cursor.fetchone()
+
+                    if not data:
+                        QMessageBox().information(None, "提示", f"房间 {room_id} 没有相关入住信息！", QMessageBox.Yes)
                         return False
-                    else:
-                        rid_out = data[0]['rid']
-                        tid_out = data[0]['tid']
-                        stime_out = data[0]['start_time']
-                        etime_out = data[0]['end_time']
-                        money = data[0]['total_price']
-                        self.cursor.execute(
-                            "insert into hotelorder(id,ordertype,start_time,end_time,rid,pay_type,money,remark,register_sid) values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-                            , (tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark,self.staff.sid))
-                        self.cursor.execute("delete from checkin_team where rid=%s and tid=%s", (rid_out, tid_out))
-                        self.db.commit()
-                        sum = sum + int(money)
-                QMessageBox().information(None, "提示", "本次需要支付%s" %str(sum), QMessageBox.Yes)
+
+                    # 提取数据
+                    rid_out, tid_out, stime_out, etime_out, money = data['rid'], data['tid'], data['start_time'], data[
+                        'end_time'], data['total_price']
+                    total_sum += int(money)
+
+                    # 插入新订单到 hotelorder_v1
+                    self.cursor.execute("""
+                        INSERT INTO hotelorder_v1 (id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
+                    """, (tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
+
+                    # 删除入住记录
+                    self.cursor.execute("DELETE FROM checkin_team WHERE rid=%s AND tid=%s", (rid_out, tid_out))
+
+                # 提交事务
+                self.db.commit()
+
+                QMessageBox().information(None, "提示", f"本次团队订单总计支付 {total_sum}，订单已生成！",
+                                          QMessageBox.Yes)
+
             return True
         except Exception as e:
-            print(e)
+            self.db.rollback()  # 遇到异常时回滚，确保数据一致性
+            print(f"退房错误: {e}")
             return False
+
 class Chart:
     def __init__(self,config=localConfig):
         self.db = pymysql.connect(host=config['host'], port=config['port'], user=config['user'],
@@ -776,89 +955,251 @@ class Chart:
             row += 1
         book.save(path+"/%s.xls" % table_name)
 
+    # def getRevenue(self):
+    #     """
+    #     获取营业额
+    #     """
+    #     list_revenue = []
+    #     list_date = []
+    #     for i in range(7):
+    #         data = ()
+    #         sum = 0
+    #         delta = datetime.timedelta(days=i)
+    #         date = datetime.date.today()
+    #         date_selected = date - delta
+    #         str_date = str(date_selected)
+    #         list_date.append(str_date[5:])
+    #         self.cursor.execute("select money from hotelorder where end_time=%s",(date_selected))
+    #         data = self.cursor.fetchall()
+    #         if data != ():
+    #             for i in range(len(data)):
+    #                 sum = sum + int(data[i]['money'])
+    #         list_revenue.append(sum)
+    #     print(list_revenue)
+    #     print(list_date)
+    #     list_date.reverse()
+    #     return list_date, list_revenue
+
+    # def getRevenue(self):
+    #     """
+    #     获取最近 7 天的营业额，新版
+    #     """
+    #     list_revenue = []
+    #     list_date = []
+    #     today = datetime.date.today()
+    #
+    #     query = """
+    #     SELECT DATE_FORMAT(end_time, '%%m-%%d') AS order_date, SUM(total_amount) AS revenue
+    #     FROM v_order_summary
+    #     WHERE end_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+    #     GROUP BY order_date
+    #     ORDER BY order_date;
+    #     """
+    #     self.cursor.execute(query, (today, today))
+    #     data = self.cursor.fetchall()
+    #
+    #     for row in data:
+    #         list_date.append(row['order_date'])
+    #         list_revenue.append(float(row['revenue']) if row['revenue'] else 0)
+    #
+    #     return list_date, list_revenue
+
     def getRevenue(self):
         """
-        获取营业额
+        获取最近 7 天的营业额，新版
+        确保即使某天无记录，仍然在图表中显示
         """
         list_revenue = []
         list_date = []
-        for i in range(7):
-            data = ()
-            sum = 0
-            delta = datetime.timedelta(days=i)
-            date = datetime.date.today()
-            date_selected = date - delta
-            str_date = str(date_selected)
-            list_date.append(str_date[5:])
-            self.cursor.execute("select money from hotelorder where end_time=%s",(date_selected))
-            data = self.cursor.fetchall()
-            if data != ():
-                for i in range(len(data)):
-                    sum = sum + int(data[i]['money'])
-            list_revenue.append(sum)
-        print(list_revenue)
-        print(list_date)
-        list_date.reverse()
+
+        today = datetime.date.today()
+        past_7_days = [(today - datetime.timedelta(days=i)).strftime('%m-%d') for i in
+                       range(6, -1, -1)]  # 生成完整的 7 天日期列表
+
+        query = """
+        SELECT DATE_FORMAT(end_time, '%%m-%%d') AS order_date, SUM(total_amount) AS revenue
+        FROM v_order_summary
+        WHERE end_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+        GROUP BY order_date
+        ORDER BY order_date;
+        """
+        self.cursor.execute(query, (today, today))
+        data = self.cursor.fetchall()
+
+        # 将 SQL 结果映射到 {日期: 营业额}
+        revenue_dict = defaultdict(lambda: 0)  # 默认值 0
+        for row in data:
+            revenue_dict[row['order_date']] = float(row['revenue']) if row['revenue'] else 0
+
+        # 生成完整的日期和营业额列表
+        list_date = past_7_days  # 确保 x 轴包含所有日期
+        list_revenue = [revenue_dict[date] for date in past_7_days]  # 确保 y 轴值与 x 轴对应
+
         return list_date, list_revenue
+
+    # def getOccupy(self):
+    #     """
+    #     获取入住率/出租率
+    #     """
+    #     list_occupy = []
+    #     list_date = []
+    #     self.cursor.execute("select count(*) from room")
+    #     totalRoomCount = self.cursor.fetchall()[0]['count(*)']
+    #     print(totalRoomCount)
+    #     for i in range(7):
+    #         data = ()
+    #         occupyRate = 0.0
+    #         delta = datetime.timedelta(days=i)
+    #         date = datetime.date.today()
+    #         date_selected = date - delta
+    #         str_date = str(date_selected)
+    #         list_date.append(str_date[5:])
+    #         self.cursor.execute("select distinct rid from hotelorder where end_time>=%s and start_time<=%s",
+    #                             (date_selected,date_selected))
+    #         data = self.cursor.fetchall()
+    #         print(data)
+    #         if data != ():
+    #             occupyRate = float(len(data) / totalRoomCount)
+    #         list_occupy.append(occupyRate)
+    #     print(list_occupy)
+    #     list_date.reverse()
+    #     return list_date, list_occupy
+
+    # def getOccupy(self):
+    #     """
+    #     获取最近 7 天的入住率，新版本
+    #     """
+    #     list_occupy = []
+    #     list_date = []
+    #     today = datetime.date.today()
+    #
+    #     # 获取总房间数
+    #     self.cursor.execute("SELECT COUNT(*) AS total_rooms FROM room")
+    #     total_room_count = self.cursor.fetchone()['total_rooms']
+    #
+    #     query = """
+    #     SELECT DATE_FORMAT(start_time, '%%m-%%d') AS checkin_date, COUNT(DISTINCT rid) AS occupied_rooms
+    #     FROM v_order_summary
+    #     WHERE start_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+    #     GROUP BY checkin_date
+    #     ORDER BY checkin_date;
+    #     """
+    #     self.cursor.execute(query, (today, today))
+    #     data = self.cursor.fetchall()
+    #
+    #     for row in data:
+    #         list_date.append(row['checkin_date'])
+    #         occupy_rate = (row['occupied_rooms'] / total_room_count) if total_room_count > 0 else 0
+    #         list_occupy.append(round(occupy_rate, 2))
+    #
+    #     return list_date, list_occupy
 
     def getOccupy(self):
         """
-        获取入住率/出租率
+        获取最近 7 天的入住率（确保所有日期都有数据）
         """
         list_occupy = []
         list_date = []
-        self.cursor.execute("select count(*) from room")
-        totalRoomCount = self.cursor.fetchall()[0]['count(*)']
-        print(totalRoomCount)
-        for i in range(7):
-            data = ()
-            occupyRate = 0.0
-            delta = datetime.timedelta(days=i)
-            date = datetime.date.today()
-            date_selected = date - delta
-            str_date = str(date_selected)
-            list_date.append(str_date[5:])
-            self.cursor.execute("select distinct rid from hotelorder where end_time>=%s and start_time<=%s",
-                                (date_selected,date_selected))
-            data = self.cursor.fetchall()
-            print(data)
-            if data != ():
-                occupyRate = float(len(data) / totalRoomCount)
-            list_occupy.append(occupyRate)
-        print(list_occupy)
-        list_date.reverse()
+
+        today = datetime.date.today()
+
+        # 生成过去 7 天的完整日期列表
+        past_7_days = [(today - datetime.timedelta(days=i)).strftime('%m-%d') for i in range(6, -1, -1)]
+
+        # 获取总房间数
+        self.cursor.execute("SELECT COUNT(*) AS total_rooms FROM room")
+        total_room_count = self.cursor.fetchone()['total_rooms']
+
+        # 查询入住数据
+        query = """
+        SELECT DATE_FORMAT(start_time, '%%m-%%d') AS checkin_date, COUNT(DISTINCT rid) AS occupied_rooms
+        FROM v_order_summary
+        WHERE start_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+        GROUP BY checkin_date
+        ORDER BY checkin_date;
+        """
+        self.cursor.execute(query, (today, today))
+        data = self.cursor.fetchall()
+
+        # 结果映射到 {日期: 入住房间数}
+        occupy_dict = defaultdict(lambda: 0)  # 默认值 0
+        for row in data:
+            occupy_dict[row['checkin_date']] = row['occupied_rooms']
+
+        # 生成完整的日期和入住率列表
+        list_date = past_7_days
+        list_occupy = [
+            round((occupy_dict[date] / total_room_count), 2) if total_room_count > 0 else 0
+            for date in past_7_days
+        ]
+
         return list_date, list_occupy
 
+    # def getClientStatics(self):
+    #     """
+    #     获取客户相关数据
+    #     """
+    #     list_clientStatics = []
+    #     self.cursor.execute("select * from hotelorder where ordertype='个人'")
+    #     num_client = len(self.cursor.fetchall())
+    #     self.cursor.execute("select distinct id from hotelorder where ordertype='团队'")
+    #     num_team = len(self.cursor.fetchall())
+    #     list_ret = []
+    #     list_ret.append(num_client)
+    #     list_ret.append(num_team)
+    #     return list_ret
 
     def getClientStatics(self):
         """
-        获取客户相关数据
+        获取个人和团队订单数量，新版本
         """
-        list_clientStatics = []
-        self.cursor.execute("select * from hotelorder where ordertype='个人'")
-        num_client = len(self.cursor.fetchall())
-        self.cursor.execute("select distinct id from hotelorder where ordertype='团队'")
-        num_team = len(self.cursor.fetchall())
-        list_ret = []
-        list_ret.append(num_client)
-        list_ret.append(num_team)
-        return list_ret
+        query = """
+        SELECT 
+            SUM(CASE WHEN ordertype = '个人' THEN 1 ELSE 0 END) AS num_client,
+            SUM(CASE WHEN ordertype = '团队' THEN 1 ELSE 0 END) AS num_team
+        FROM v_client_team_order;
+        """
+        self.cursor.execute(query)
+        data = self.cursor.fetchone()
+        return [data['num_client'], data['num_team']]
 
+
+    # def getStaffStatics(self):
+    #     """
+    #     获取员工相关数据
+    #     """
+    #     self.cursor.execute("select register_sid,count(*) from hotelorder group by register_sid")
+    #     data = self.cursor.fetchall()
+    #     list_clientNum = []
+    #     list_clientSta = []
+    #     for i in range(len(data)):
+    #         list_clientNum.append(data[i]['register_sid'])
+    #         list_clientSta.append(data[i]['count(*)'])
+    #     print(list_clientNum)
+    #     print(list_clientSta)
+    #     return list_clientNum, list_clientSta
 
     def getStaffStatics(self):
         """
-        获取员工相关数据
+        获取员工订单处理情况
         """
-        self.cursor.execute("select register_sid,count(*) from hotelorder group by register_sid")
+        query = """
+        SELECT register_sid, COUNT(*) AS order_count
+        FROM v_order_summary
+        GROUP BY register_sid
+        ORDER BY order_count DESC;
+        """
+        self.cursor.execute(query)
         data = self.cursor.fetchall()
-        list_clientNum = []
-        list_clientSta = []
-        for i in range(len(data)):
-            list_clientNum.append(data[i]['register_sid'])
-            list_clientSta.append(data[i]['count(*)'])
-        print(list_clientNum)
-        print(list_clientSta)
-        return list_clientNum, list_clientSta
+
+        list_staff_id = []
+        list_order_count = []
+        for row in data:
+            list_staff_id.append(row['register_sid'])
+            list_order_count.append(row['order_count'])
+
+        return list_staff_id, list_order_count
+
 class Figure_Canvas(FigureCanvas):
     def __init__(self, width=5, height=4, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
@@ -1745,10 +2086,15 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         QMessageBox().information(None, "提示", "导出表格完成！", QMessageBox.Yes)
 
     def help(self):
+        # QMessageBox().information(None, "提示", "client -- 客户表\nteam -- 团队表\nstaff -- 员工表\nroom -- 房间表"
+        #                                       "\ncheckin_client -- 入住个人客户表"
+        #                                       "\ncheckin_team -- 入住团体表\nbooking_client -- 个人预约表\n"
+        #                                       "booking_team -- 团体预约表\nhotelorder -- 完成订单表", QMessageBox.Yes)
+
         QMessageBox().information(None, "提示", "client -- 客户表\nteam -- 团队表\nstaff -- 员工表\nroom -- 房间表"
-                                              "\ncheckin_client -- 入住个人客户表"
-                                              "\ncheckin_team -- 入住团体表\nbooking_client -- 个人预约表\n"
-                                              "booking_team -- 团体预约表\nhotelorder -- 完成订单表", QMessageBox.Yes)
+                                                "\ncheckin_client -- 入住个人客户表"
+                                                "\ncheckin_team -- 入住团体表\nbooking_client -- 个人预约表\n"
+                                                "booking_team -- 团体预约表\nhotelorder_v1 -- 完成订单表", QMessageBox.Yes)
 
     def figureOrder(self):
         self.plotRevenue()
@@ -1762,6 +2108,16 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         F.axes.plot(x, y)
 
         F.fig.suptitle("revenue in 7 days")
+        F.axes.plot(x, y, marker='o')  # 添加点标记，确保即使某天营业额为 0 也能清晰显示
+        F.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
+        # F.axes.set_xticklabels(x, rotation=45)  # 旋转 x 轴标签，避免重叠
+        F.axes.set_ylabel("Revenue")  # y 轴添加单位
+
+        # 设置 y 轴范围
+        # F.axes.set_ylim(0, 1)  # 强制 y 轴范围为 [0, 1]
+        # F.axes.set_ylim(bottom=0)  # 确保 y 轴起点为 0
+
+
         self.gridlayout.addWidget(F, 1, 0)
 
     def plotOccupy(self):
@@ -1769,6 +2125,13 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
         F1.fig.suptitle("occupancy rate in 7 days")
         c = Chart()
         x, y = c.getOccupy()
+
+        F1.axes.plot(x, y, marker='o')  # 画点，防止数据缺失时线段断裂
+        F1.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
+        F1.axes.set_ylabel("Occupancy Rate (%)")  # y 轴添加单位
+
+        F1.axes.set_ylim(0, 1)  # 确保 y 轴在 0 到 1 之间（百分比）
+
         F1.axes.plot(x, y)
         self.gridlayout.addWidget(F1, 2, 0)
 
@@ -2245,6 +2608,9 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
     def tableDel(self):
         """
         从表格中获取要删除的员工，并删除
+
+        ![](https://raw.githubusercontent.com/Tsuki-Gor/Pic_Bed_Ob/main/Mixed/M2025/03/2025_03_07__23_24_36_130b54.png)
+
         """
         # 获取选中的表格行
         row_selected = self.searchTable.selectedItems()
@@ -2270,10 +2636,22 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
         # 获取当前选中的行索引。这里的行索引是什么？
         row = row_selected[0].row()
         column  = row_selected[0].column()
+
+        # 获取第一列的 sid（当前行第 0 列的值）
+        sid_item = self.searchTable.item(row, 0)
+        if sid_item is None:
+            QMessageBox().information(None, "提示", "无法获取员工ID！", QMessageBox.Yes)
+            return
+
+        sid = sid_item.text()  # 提取 sid 值
+
         # 获取 用户输入的新值。
         value = self.modifyvalue.text()
-        # 调用 modifyStaff() 更新数据库中的员工信息。
-        self.staff.modifyStaff(row,column,value)
+        # # 调用 modifyStaff() 更新数据库中的员工信息。
+        # self.staff.modifyStaff(row,column,value)
+
+        self.staff.modifyStaff_2(sid, column, value)
+
         tvalue = QTableWidgetItem(('%s') % (value))
         self.searchTable.setItem(row,column, tvalue)
         QMessageBox().information(None, "提示", "修改成功！", QMessageBox.Yes)
