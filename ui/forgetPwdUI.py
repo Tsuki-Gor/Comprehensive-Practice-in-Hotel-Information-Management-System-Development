@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton
+from PyQt5 import QtCore
 
 class Ui_fpWindow(object):
     def setupUi(self, fpWindow):
@@ -37,3 +38,6 @@ class Ui_fpWindow(object):
         self.btnBack.setGeometry(230, 200, 120, 40)
 
         fpWindow.setCentralWidget(self.centralwidget)
+
+        _translate = QtCore.QCoreApplication.translate
+        fpWindow.setWindowTitle(_translate("fpWindow", "忘记密码"))
