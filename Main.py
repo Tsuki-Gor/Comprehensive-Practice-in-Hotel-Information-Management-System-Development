@@ -2123,12 +2123,14 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         # 下面展示信息
         self.flayout = QVBoxLayout()
         self.glayout.addLayout(self.flayout,i,j)
+        # QLabel 用于显示图片
         lb = QLabel(self)
-        lb.setFixedSize(150,80)
-        lb.setPixmap(QPixmap(rpic))
-        lb.setStyleSheet("border:1px solid white")
-        lb.setScaledContents(True)
-        self.flayout.addWidget(lb)
+        lb.setFixedSize(150, 80)  # 设置图片的固定大小
+        lb.setPixmap(QPixmap(rpic))  # 加载图片
+        lb.setStyleSheet("border:1px solid white")  # 设置白色边框
+        lb.setScaledContents(True)  # 让图片自动适应 QLabel 的大小
+        self.flayout.addWidget(lb)  # 添加到布局中
+
         self.flayout.addWidget(QLabel("房间号:"+rid + "    楼层:"+rstorey,self, styleSheet="color: #990066;"))
         self.flayout.addWidget(QLabel("类型:"+rtype, self, styleSheet="color: #990066;", openExternalLinks=True))
         self.flayout.addWidget(QLabel("描述:"+rdesc+" 价格:"+rprice, self, styleSheet="color: #990066;", openExternalLinks=True))
@@ -2138,6 +2140,23 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
         pb.setStyleSheet("background:#CCFFCC;border-radius:8px;\n")
         self.flayout.addWidget(pb)
         pb.clicked.connect(lambda: self.pbSwitch(rid,endtime))
+
+    def get_image_from_db(self, rid):
+        """
+        从数据库中获取房间的图片 (BLOB)
+        """
+        try:
+            r=Room()
+            r.cursor.execute("SELECT rpic FROM rooms WHERE room_id=?", (rid,))
+            result = r.cursor.fetchone()
+
+            if result:
+                return result[0]  # 返回 BLOB 数据
+            else:
+                return None
+        except Exception as e:
+            print(f"数据库读取错误: {e}")
+            return None
 
     def reOpen(self):
         self.close()
@@ -2400,6 +2419,27 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
         self.welcome.setText(self.staff.sname)
         self.role.setText('权限：'+ self.staff.srole)
 
+        # 加载头像
+        if self.staff.image:  # 确保 staff.image 不是 None
+            pixmap = QPixmap()
+            if pixmap.loadFromData(self.staff.image):  # 从数据库的 BLOB 加载数据
+                # 确保 head 是 QToolButton
+                if isinstance(self.head, QToolButton):
+                    icon = QIcon(pixmap)
+                    self.head.setIcon(icon)
+
+                    # 调整按钮的 iconSize，使其适配头像
+                    button_size = self.head.size()  # 获取按钮大小
+                    self.head.setIconSize(button_size)  # 让头像匹配按钮尺寸
+                else:
+                    print("head 组件类型未知，无法设置图片")
+            else:
+                print("头像加载失败：数据格式错误")
+        else:
+            print("未找到头像数据")
+
+
+
         self.name.setText(self.staff.sname)
         self.sname.setText(self.staff.sname)
         self.ssex.setText(self.staff.ssex)
@@ -2408,6 +2448,25 @@ class StaffOP(QMainWindow, Ui_StaffWindow):
         self.sphone.setText(self.staff.sphone)
         self.sidcard.setText(self.staff.sidcard)
         self.sidcard_2.setText(self.staff.sid)
+
+        # 加载头像
+        if self.staff.image:  # 确保 staff.image 不是 None
+            pixmap = QPixmap()
+            if pixmap.loadFromData(self.staff.image):  # 从数据库的 BLOB 加载数据
+                # 确保 head 是 QToolButton
+                if isinstance(self.head_2, QToolButton):
+                    icon = QIcon(pixmap)
+                    self.head_2.setIcon(icon)
+
+                    # 调整按钮的 iconSize，使其适配头像
+                    button_size = self.head_2.size()  # 获取按钮大小
+                    self.head_2.setIconSize(button_size)  # 让头像匹配按钮尺寸
+                else:
+                    print("head 组件类型未知，无法设置图片")
+            else:
+                print("头像加载失败：数据格式错误")
+        else:
+            print("未找到头像数据")
 
         # 列表组件设置
         # listWidget 允许 点击不同选项，切换到不同的页面（通常结合 QStackedWidget 使用）。

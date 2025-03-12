@@ -268,7 +268,7 @@ border-bottom:1px solid #717072;
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/bg.png</pixmap>
+     <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">references/pictures/bg.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
