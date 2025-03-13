@@ -263,7 +263,7 @@ border:1px solid black
     <widget class="QLabel" name="label_2">
      <property name="geometry">
       <rect>
-       <x>80</x>
+       <x>70</x>
        <y>190</y>
        <width>121</width>
        <height>16</height>
@@ -342,7 +342,7 @@ border-radius:5px</string>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="page">
      <widget class="QToolButton" name="toolButton_2">
@@ -1168,6 +1168,67 @@ background:#CCFF99
          <string>女</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_87">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_88">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_88</zorder>
+       <zorder>label_87</zorder>
+       <zorder>line_4</zorder>
+       <zorder>label</zorder>
+       <zorder>label_3</zorder>
+       <zorder>cname</zorder>
+       <zorder>label_13</zorder>
+       <zorder>cphone</zorder>
+       <zorder>label_9</zorder>
+       <zorder>label_11</zorder>
+       <zorder>cid</zorder>
+       <zorder>label_14</zorder>
+       <zorder>label_15</zorder>
+       <zorder>cage</zorder>
+       <zorder>crid</zorder>
+       <zorder>label_10</zorder>
+       <zorder>endtime</zorder>
+       <zorder>label_16</zorder>
+       <zorder>label_17</zorder>
+       <zorder>remark</zorder>
+       <zorder>commitCheckin</zorder>
+       <zorder>male</zorder>
+       <zorder>female</zorder>
       </widget>
       <widget class="QWidget" name="page_7">
        <widget class="Line" name="line_5">
@@ -1452,6 +1513,63 @@ background:#CCFF99
          <string>* 多个房间用逗号隔开</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_85">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>-10</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_86">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_86</zorder>
+       <zorder>label_85</zorder>
+       <zorder>line_5</zorder>
+       <zorder>label_12</zorder>
+       <zorder>label_4</zorder>
+       <zorder>label_18</zorder>
+       <zorder>tphone</zorder>
+       <zorder>label_19</zorder>
+       <zorder>tremark</zorder>
+       <zorder>label_5</zorder>
+       <zorder>tname</zorder>
+       <zorder>label_21</zorder>
+       <zorder>tendtime</zorder>
+       <zorder>label_29</zorder>
+       <zorder>tid</zorder>
+       <zorder>trid</zorder>
+       <zorder>commitCheckinTeam</zorder>
+       <zorder>label_30</zorder>
+       <zorder>label_6</zorder>
       </widget>
       <widget class="QWidget" name="page_10">
        <widget class="Line" name="line_6">
@@ -1686,6 +1804,60 @@ background:#CCFF99
          <string>确认入住</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_75">
+        <property name="geometry">
+         <rect>
+          <x>3</x>
+          <y>-9</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_76">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_76</zorder>
+       <zorder>label_75</zorder>
+       <zorder>line_6</zorder>
+       <zorder>label_46</zorder>
+       <zorder>label_47</zorder>
+       <zorder>label_48</zorder>
+       <zorder>cid_rtc</zorder>
+       <zorder>label_49</zorder>
+       <zorder>crid_rtc</zorder>
+       <zorder>tid_rtc</zorder>
+       <zorder>label_50</zorder>
+       <zorder>trid_rtc</zorder>
+       <zorder>label_51</zorder>
+       <zorder>label_52</zorder>
+       <zorder>commitrtcC</zorder>
+       <zorder>commitrtcT</zorder>
       </widget>
      </widget>
      <widget class="Line" name="line_2">
@@ -1778,7 +1950,7 @@ background-color:#CCFFCC</string>
        </rect>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="page_8">
        <widget class="Line" name="line_7">
@@ -2148,6 +2320,69 @@ background:#CCFF99
          <string>女</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_77">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_79">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_79</zorder>
+       <zorder>label_77</zorder>
+       <zorder>line_7</zorder>
+       <zorder>label_7</zorder>
+       <zorder>label_8</zorder>
+       <zorder>cname_booking</zorder>
+       <zorder>label_20</zorder>
+       <zorder>cphone_booking</zorder>
+       <zorder>label_28</zorder>
+       <zorder>label_31</zorder>
+       <zorder>cid_booking</zorder>
+       <zorder>label_32</zorder>
+       <zorder>label_33</zorder>
+       <zorder>cage_booking</zorder>
+       <zorder>crid_booking</zorder>
+       <zorder>label_34</zorder>
+       <zorder>starttime_booking</zorder>
+       <zorder>label_35</zorder>
+       <zorder>endtime_booking</zorder>
+       <zorder>line_8</zorder>
+       <zorder>label_36</zorder>
+       <zorder>remark_booking</zorder>
+       <zorder>commitBookingClient</zorder>
+       <zorder>male_booking</zorder>
+       <zorder>female_booking</zorder>
       </widget>
       <widget class="QWidget" name="page_9">
        <widget class="QDateEdit" name="tendtime_booking">
@@ -2465,6 +2700,65 @@ background:#CCFF99
          <string>* 多个房间用逗号隔开</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_89">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_90">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_90</zorder>
+       <zorder>label_89</zorder>
+       <zorder>tendtime_booking</zorder>
+       <zorder>line_9</zorder>
+       <zorder>label_37</zorder>
+       <zorder>label_38</zorder>
+       <zorder>label_39</zorder>
+       <zorder>tphone_booking</zorder>
+       <zorder>label_40</zorder>
+       <zorder>line_10</zorder>
+       <zorder>tremark_booking</zorder>
+       <zorder>label_41</zorder>
+       <zorder>tname_booking</zorder>
+       <zorder>label_42</zorder>
+       <zorder>tstarttime_booking</zorder>
+       <zorder>label_43</zorder>
+       <zorder>tid_booking</zorder>
+       <zorder>trid_booking</zorder>
+       <zorder>commitBookingTeam</zorder>
+       <zorder>label_44</zorder>
+       <zorder>label_45</zorder>
       </widget>
       <widget class="QWidget" name="page_11">
        <widget class="QLineEdit" name="cid_deb">
@@ -2699,6 +2993,60 @@ background:#CCFF99
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
+       <widget class="QLabel" name="label_91">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_92">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_92</zorder>
+       <zorder>label_91</zorder>
+       <zorder>cid_deb</zorder>
+       <zorder>label_53</zorder>
+       <zorder>label_54</zorder>
+       <zorder>commitDeBookT</zorder>
+       <zorder>label_55</zorder>
+       <zorder>label_56</zorder>
+       <zorder>commitDeBookC</zorder>
+       <zorder>tid_deb</zorder>
+       <zorder>crid_deb</zorder>
+       <zorder>label_57</zorder>
+       <zorder>label_58</zorder>
+       <zorder>label_59</zorder>
+       <zorder>trid_deb</zorder>
+       <zorder>line_13</zorder>
       </widget>
      </widget>
      <widget class="QListWidget" name="listWidget_3">
@@ -3117,6 +3465,67 @@ background:#CCFF99
        </property>
       </item>
      </widget>
+     <widget class="QLabel" name="label_80">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>30</y>
+        <width>301</width>
+        <height>581</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="pixmap">
+       <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+      </property>
+      <property name="scaledContents">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_81">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>30</y>
+        <width>301</width>
+        <height>571</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="pixmap">
+       <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+      </property>
+      <property name="scaledContents">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <zorder>label_81</zorder>
+     <zorder>label_80</zorder>
+     <zorder>toolButton_5</zorder>
+     <zorder>split_5</zorder>
+     <zorder>team_flag</zorder>
+     <zorder>single_flag</zorder>
+     <zorder>label_60</zorder>
+     <zorder>label_61</zorder>
+     <zorder>id_checkout</zorder>
+     <zorder>remark_checkout</zorder>
+     <zorder>label_62</zorder>
+     <zorder>starttime_5</zorder>
+     <zorder>endtime_5</zorder>
+     <zorder>starttime_checkout</zorder>
+     <zorder>label_63</zorder>
+     <zorder>endtime_checkout</zorder>
+     <zorder>rid_checkout</zorder>
+     <zorder>label_64</zorder>
+     <zorder>label_65</zorder>
+     <zorder>commitCheckout</zorder>
+     <zorder>line_14</zorder>
+     <zorder>label_67</zorder>
+     <zorder>comboBox</zorder>
     </widget>
     <widget class="QWidget" name="page_5">
      <widget class="QToolButton" name="toolButton_6">
@@ -3603,6 +4012,61 @@ border-color:#CCCCFF;
          <string>图片路径</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_82">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_83">
+        <property name="geometry">
+         <rect>
+          <x>300</x>
+          <y>0</y>
+          <width>301</width>
+          <height>531</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/anotherbg.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <zorder>label_83</zorder>
+       <zorder>label_82</zorder>
+       <zorder>commitAddRoom</zorder>
+       <zorder>label_71</zorder>
+       <zorder>label_68</zorder>
+       <zorder>label_70</zorder>
+       <zorder>rprice_add</zorder>
+       <zorder>rid_add</zorder>
+       <zorder>rdesc_add</zorder>
+       <zorder>label_69</zorder>
+       <zorder>label_72</zorder>
+       <zorder>label_84</zorder>
+       <zorder>rtype_add</zorder>
+       <zorder>rstorey_add</zorder>
+       <zorder>label_66</zorder>
+       <zorder>scan</zorder>
+       <zorder>path</zorder>
       </widget>
       <widget class="QWidget" name="page_12">
        <widget class="Line" name="line_17">
@@ -3817,6 +4281,8 @@ background-color:#CCFFCC</string>
    </widget>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="C:/Users/Lenovo/Desktop/pic.qrc"/>
+ </resources>
  <connections/>
 </ui>

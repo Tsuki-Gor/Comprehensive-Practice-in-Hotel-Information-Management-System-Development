@@ -15,7 +15,7 @@ localConfig = {
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -67,7 +67,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -1888,37 +1888,35 @@ class Ui_HomeWindow(object):
         MainWindow.resize(800, 600)
         MainWindow.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("references/pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
-        MainWindow.setStyleSheet("\n"
-"  QToolButton {\n"
-"    background: #EAF7FF;\n"
-"    border-radius: 15px;\n"
-"    border: 1px solid #a0c0d0;  /* 添加边框 */\n"
-"    padding: 8px;  /* 内边距 */\n"
-"    font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    transition: all 0.3s ease;  /* 平滑过渡 */\n"
-"  }\n"
-"\n"
-"  QToolButton:hover {\n"
-"    background: #49ebff;\n"
-"    border-color: #30a0c0;\n"
-"    box-shadow: 0 4px 12px rgba(73, 235, 255, 0.3);  /* 悬浮阴影 */\n"
-"  }\n"
-"\n"
-"  QToolButton:pressed {\n"
-"    background: #30a0c0;\n"
-"    transform: translateY(2px);  /* 按下下沉效果 */\n"
-"  }\n"
-"\n"
-"  /* 单独调整图标按钮样式 */\n"
-"  #toolButton_7 {\n"
-"    background: transparent;  /* 透明背景 */\n"
-"    border: none;\n"
-"    icon-size: 80px;  /* 放大图标 */\n"
-"  }\n"
-" ")
+        MainWindow.setStyleSheet("QMainWindow{\n"
+"border-radius:15px\n"
+"}\n"
+"QWidget{\n"
+"border-radius:15px;\n"
+"}\n"
+"#frame{\n"
+"background: #e1e9ed;}\n"
+"QToolButton{\n"
+"background:#EAF7FF;\n"
+"border-radius:15px;\n"
+"}\n"
+"QToolButton:hover{\n"
+"background:#EAF7FF;\n"
+"border-radius:15px;\n"
+"background:#49ebff;\n"
+"}\n"
+"#label{\n"
+"text-align:center;\n"
+"}\n"
+"#welcome{\n"
+"text-align:center;\n"
+"}\n"
+"#toolButton_7\n"
+"{\n"
+"background:#e1e9ed;\n"
+"}")
         MainWindow.setTabShape(QtWidgets.QTabWidget.Rounded)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -1927,7 +1925,6 @@ class Ui_HomeWindow(object):
         self.chartbutton.setMinimumSize(QtCore.QSize(200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.chartbutton.setFont(font)
@@ -1941,16 +1938,13 @@ class Ui_HomeWindow(object):
         self.roombutton.setGeometry(QtCore.QRect(40, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.roombutton.setFont(font)
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap("references/pictures/room.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.roombutton.setIcon(icon2)
-        self.roombutton.setIconSize(QtCore.QSize(50, 50))
-        self.roombutton.setCheckable(False)
-        self.roombutton.setChecked(False)
+        self.roombutton.setIconSize(QtCore.QSize(80, 80))
         self.roombutton.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.roombutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.roombutton.setObjectName("roombutton")
@@ -1958,14 +1952,13 @@ class Ui_HomeWindow(object):
         self.staffbutton.setGeometry(QtCore.QRect(290, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.staffbutton.setFont(font)
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap("references/pictures/employee.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.staffbutton.setIcon(icon3)
-        self.staffbutton.setIconSize(QtCore.QSize(55, 55))
+        self.staffbutton.setIconSize(QtCore.QSize(80, 80))
         self.staffbutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.staffbutton.setObjectName("staffbutton")
         self.frame = QtWidgets.QFrame(self.centralwidget)
@@ -1985,9 +1978,7 @@ class Ui_HomeWindow(object):
         self.toolButton_7 = QtWidgets.QToolButton(self.frame)
         self.toolButton_7.setGeometry(QtCore.QRect(370, 70, 71, 71))
         font = QtGui.QFont()
-        font.setPointSize(-1)
-        font.setBold(True)
-        font.setWeight(75)
+        font.setPointSize(9)
         self.toolButton_7.setFont(font)
         self.toolButton_7.setText("")
         icon4 = QtGui.QIcon()
@@ -1996,21 +1987,19 @@ class Ui_HomeWindow(object):
         self.toolButton_7.setIconSize(QtCore.QSize(100, 100))
         self.toolButton_7.setObjectName("toolButton_7")
         self.modifyPwd = QtWidgets.QToolButton(self.frame)
-        self.modifyPwd.setGeometry(QtCore.QRect(710, 130, 81, 31))
-        self.modifyPwd.setStyleSheet("\n"
-"    background: rgba(225,233,237,0.8);\n"
-"    color: #2980b9;\n"
-"    border-radius: 10px;\n"
-"    border: 1px solid #a0c0d0;\n"
-"    padding: 2px 8px;\n"
-"   ")
+        self.modifyPwd.setGeometry(QtCore.QRect(710, 150, 81, 21))
+        self.modifyPwd.setStyleSheet("background:#e1e9ed")
         self.modifyPwd.setObjectName("modifyPwd")
         self.label_3 = QtWidgets.QLabel(self.frame)
-        self.label_3.setGeometry(QtCore.QRect(0, 170, 801, 16))
+        self.label_3.setGeometry(QtCore.QRect(0, 0, 771, 451))
         self.label_3.setText("")
-        self.label_3.setPixmap(QtGui.QPixmap("references/pictures/line.png"))
+        self.label_3.setPixmap(QtGui.QPixmap("references/pictures/bg.png"))
         self.label_3.setScaledContents(True)
         self.label_3.setObjectName("label_3")
+        self.toolButton_7.raise_()
+        self.label_3.raise_()
+        self.welcome.raise_()
+        self.modifyPwd.raise_()
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(310, 540, 181, 41))
         palette = QtGui.QPalette()
@@ -2164,9 +2153,9 @@ class Ui_HomeWindow(object):
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
-        self.label_2.setGeometry(QtCore.QRect(0, 0, 801, 601))
+        self.label_2.setGeometry(QtCore.QRect(-7, 181, 791, 431))
         self.label_2.setText("")
-        self.label_2.setPixmap(QtGui.QPixmap("references/pictures/home_bg.png"))
+        self.label_2.setPixmap(QtGui.QPixmap("references/pictures/bg.png"))
         self.label_2.setScaledContents(True)
         self.label_2.setObjectName("label_2")
         self.label_2.raise_()
