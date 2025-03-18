@@ -90,6 +90,77 @@ def get_staff():#员工账户
     global staff
     return staff
 
+class Database:
+    """数据库操作类"""
+    def __init__(self):
+        self.conn = pymysql.connect(**localConfig)
+        self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+
+    def query(self, sql, params=None):
+        """执行查询 SQL"""
+        self.cursor.execute(sql, params or ())
+        return self.cursor.fetchall()
+
+    def execute(self, sql, params=None):
+        """执行 INSERT、UPDATE、DELETE"""
+        self.cursor.execute(sql, params or ())
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def close(self):
+        """关闭数据库连接"""
+        self.cursor.close()
+        self.conn.close()
+
+class InvoiceManager:
+    """发票管理类"""
+
+    @staticmethod
+    def fetch_invoice_summary(invoice_id=None, order_id=None, client_or_team_id=None, ordertype=None):
+        """查询发票信息"""
+        db = Database()
+        sql = "SELECT * FROM v_invoice_summary WHERE 1=1"
+        params = []
+        if invoice_id:
+            sql += " AND invoice_id = %s"
+            params.append(invoice_id)
+        if order_id:
+            sql += " AND order_id = %s"
+            params.append(order_id)
+        if client_or_team_id:
+            sql += " AND client_or_team_id = %s"
+            params.append(client_or_team_id)
+        if ordertype:
+            sql += " AND ordertype = %s"
+            params.append(ordertype)
+
+        result = db.query(sql, params)
+        db.close()
+        return result
+
+    @staticmethod
+    def create_invoice(order_id, invoice_title, invoice_amount, invoice_type='Electronic', tax_number=None, remark=None):
+        """创建新发票"""
+        db = Database()
+        sql = """
+            INSERT INTO invoice (order_id, invoice_title, invoice_type, invoice_amount, tax_number, invoice_status, remark)
+            VALUES (%s, %s, %s, %s, %s, 'pending', %s)
+        """
+        new_invoice_id = db.execute(sql, (order_id, invoice_title, invoice_type, invoice_amount, tax_number, remark))
+        db.close()
+        return new_invoice_id
+
+    @staticmethod
+    def update_invoice_status(invoice_id, status):
+        """更新发票状态"""
+        if status not in ['issued', 'cancelled']:
+            return {"error": "无效的状态"}
+
+        db = Database()
+        sql = "UPDATE invoice SET invoice_status = %s, issue_time = %s WHERE invoice_id = %s"
+        db.execute(sql, (status, datetime.utcnow(), invoice_id))
+        db.close()
+        return {"message": f"发票状态已更新为 {status}"}
 
 class Staff:
     """
