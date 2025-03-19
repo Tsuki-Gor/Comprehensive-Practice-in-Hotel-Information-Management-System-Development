@@ -9,6 +9,7 @@ from PyQt5.Qt import *
 # 从 PyQt5.QtCore 模块导入 Qt 类，用于访问 Qt 框架的核心常量和枚举
 from PyQt5.QtCore import Qt
 # 定义数据库配置字典 localConfig，包含数据库连接所需的各项参数
+from decimal import Decimal
 localConfig = {
     'host': 'localhost',
     # 数据库主机地址
@@ -63,6 +64,7 @@ from collections import defaultdict
 
 import re
 
+
 localConfig = {
     'host': 'localhost',
     'port': 3306,
@@ -89,6 +91,7 @@ def get_staff():#员工账户
     """
     global staff
     return staff
+
 
 class Database:
     """数据库操作类"""
@@ -161,6 +164,189 @@ class InvoiceManager:
         db.execute(sql, (status, datetime.utcnow(), invoice_id))
         db.close()
         return {"message": f"发票状态已更新为 {status}"}
+
+
+class Payment:
+    """
+    支付记录模型，对应表 payment
+    """
+    def __init__(self, payment_id: int = None, order_id: int = None,
+                 pay_amount: Decimal = Decimal("0.00"), pay_method: str = "",
+                 payment_status: str = "pending", transaction_id: str = None,
+                 pay_time: datetime = None, remark: str = None):
+        self.payment_id = payment_id
+        self.order_id = order_id
+        self.pay_amount = pay_amount
+        self.pay_method = pay_method
+        self.payment_status = payment_status
+        self.transaction_id = transaction_id
+        self.pay_time = pay_time if pay_time else datetime.now()
+        self.remark = remark
+
+    def __repr__(self):
+        return (f"Payment(payment_id={self.payment_id}, order_id={self.order_id}, "
+                f"pay_amount={self.pay_amount}, pay_method='{self.pay_method}', "
+                f"payment_status='{self.payment_status}', transaction_id='{self.transaction_id}', "
+                f"pay_time='{self.pay_time}', remark='{self.remark}')")
+
+
+class PaymentDetail:
+    """
+    支付详情模型，对应视图 v_payment_details
+    视图字段：payment_id, order_id, client_or_team_id, ordertype, pay_amount,
+            pay_method, payment_status, transaction_id, pay_time
+    """
+    def __init__(self, payment_id: int, order_id: int, client_or_team_id: str,
+                 ordertype: str, pay_amount: Decimal, pay_method: str,
+                 payment_status: str, transaction_id: str, pay_time: datetime):
+        self.payment_id = payment_id
+        self.order_id = order_id
+        self.client_or_team_id = client_or_team_id
+        self.ordertype = ordertype
+        self.pay_amount = pay_amount
+        self.pay_method = pay_method
+        self.payment_status = payment_status
+        self.transaction_id = transaction_id
+        self.pay_time = pay_time
+
+    def __repr__(self):
+        return (f"PaymentDetail(payment_id={self.payment_id}, order_id={self.order_id}, "
+                f"client_or_team_id='{self.client_or_team_id}', ordertype='{self.ordertype}', "
+                f"pay_amount={self.pay_amount}, pay_method='{self.pay_method}', "
+                f"payment_status='{self.payment_status}', transaction_id='{self.transaction_id}', "
+                f"pay_time='{self.pay_time}')")
+
+
+# -------------------------------
+# 2. 数据访问层（PaymentRepository）
+# -------------------------------
+
+class PaymentRepository:
+    """
+    封装支付记录的所有数据库操作
+    """
+    def __init__(self, db: Database):
+        self.db = db
+
+    def get_payment_by_id(self, payment_id: int) -> Payment:
+        sql = "SELECT * FROM payment WHERE payment_id = %s"
+        result = self.db.query(sql, (payment_id,))
+        if result:
+            row = result[0]
+            return Payment(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time'],
+                remark=row['remark']
+            )
+        return None
+
+    def get_all_payments(self) -> list:
+        sql = "SELECT * FROM payment"
+        results = self.db.query(sql)
+        payments = []
+        for row in results:
+            payments.append(Payment(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time'],
+                remark=row['remark']
+            ))
+        return payments
+
+    def insert_payment(self, payment: Payment) -> int:
+        sql = ("INSERT INTO payment (order_id, pay_amount, pay_method, payment_status, "
+               "transaction_id, pay_time, remark) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+        params = (payment.order_id, payment.pay_amount, payment.pay_method, payment.payment_status,
+                  payment.transaction_id, payment.pay_time, payment.remark)
+        payment_id = self.db.execute(sql, params)
+        payment.payment_id = payment_id
+        return payment_id
+
+    def update_payment(self, payment: Payment) -> bool:
+        sql = ("UPDATE payment SET order_id=%s, pay_amount=%s, pay_method=%s, payment_status=%s, "
+               "transaction_id=%s, pay_time=%s, remark=%s WHERE payment_id=%s")
+        params = (payment.order_id, payment.pay_amount, payment.pay_method, payment.payment_status,
+                  payment.transaction_id, payment.pay_time, payment.remark, payment.payment_id)
+        self.db.execute(sql, params)
+        return True
+
+    def delete_payment(self, payment_id: int) -> bool:
+        sql = "DELETE FROM payment WHERE payment_id = %s"
+        self.db.execute(sql, (payment_id,))
+        return True
+
+    def get_payment_details_by_order_id(self, order_id: int) -> list:
+        """
+        从视图中查询指定订单的支付详情
+        """
+        sql = "SELECT * FROM v_payment_details WHERE order_id = %s"
+        results = self.db.query(sql, (order_id,))
+        details = []
+        for row in results:
+            details.append(PaymentDetail(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                client_or_team_id=row['client_or_team_id'],
+                ordertype=row['ordertype'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time']
+            ))
+        return details
+
+
+# -------------------------------
+# 3. 业务逻辑层（PaymentService）
+# -------------------------------
+
+class PaymentService:
+    """
+    处理支付记录的业务逻辑，例如数据校验、异常处理等
+    """
+    def __init__(self, repository: PaymentRepository):
+        self.repository = repository
+
+    def create_payment(self, payment: Payment) -> Payment:
+        # 简单的校验：支付金额必须大于0
+        if payment.pay_amount <= 0:
+            raise ValueError("支付金额必须大于0")
+        payment_id = self.repository.insert_payment(payment)
+        payment.payment_id = payment_id
+        return payment
+
+    def update_payment(self, payment: Payment) -> Payment:
+        if not payment.payment_id or payment.payment_id <= 0:
+            raise ValueError("支付记录ID无效")
+        self.repository.update_payment(payment)
+        return payment
+
+    def remove_payment(self, payment_id: int) -> bool:
+        if payment_id <= 0:
+            raise ValueError("支付记录ID无效")
+        return self.repository.delete_payment(payment_id)
+
+    def find_payment_by_id(self, payment_id: int) -> Payment:
+        return self.repository.get_payment_by_id(payment_id)
+
+    def list_payments(self) -> list:
+        return self.repository.get_all_payments()
+
+    def get_payment_details(self, order_id: int) -> list:
+        """
+        查询指定订单的支付详情（来自视图）
+        """
+        return self.repository.get_payment_details_by_order_id(order_id)
 
 class Staff:
     """
