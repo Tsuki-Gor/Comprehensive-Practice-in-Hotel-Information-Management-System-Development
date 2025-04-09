@@ -139,23 +139,6 @@ border:1px solid black
     </item>
     <item>
      <property name="text">
-      <string>  更新房源*</string>
-     </property>
-     <property name="font">
-      <font>
-       <family>FontAwesome</family>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../pictures/room3.png</normaloff>../../../pictures/room3.png</iconset>
-     </property>
-    </item>
-    <item>
-     <property name="text">
       <string>  办理入住</string>
      </property>
      <property name="font">
@@ -203,6 +186,23 @@ border:1px solid black
      <property name="icon">
       <iconset>
        <normaloff>../../../pictures/room5.png</normaloff>../../../pictures/room5.png</iconset>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>  更新房源*</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>FontAwesome</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../pictures/room3.png</normaloff>../../../pictures/room3.png</iconset>
      </property>
     </item>
    </widget>
