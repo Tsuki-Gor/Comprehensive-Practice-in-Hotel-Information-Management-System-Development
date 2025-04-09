@@ -134,58 +134,7 @@ border:1px solid black
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../pictures/room1.png</normaloff>../../../../../pictures/room1.png</iconset>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>  办理入住</string>
-     </property>
-     <property name="font">
-      <font>
-       <family>FontAwesome</family>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../../../pictures/room2.png</normaloff>../../../../../pictures/room2.png</iconset>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>  预定登记和取消</string>
-     </property>
-     <property name="font">
-      <font>
-       <family>FontAwesome</family>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../../../pictures/room4.png</normaloff>../../../../../pictures/room4.png</iconset>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>   办理退房</string>
-     </property>
-     <property name="font">
-      <font>
-       <family>FontAwesome</family>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../../../pictures/room5.png</normaloff>../../../../../pictures/room5.png</iconset>
+       <normaloff>../../../pictures/room1.png</normaloff>../../../pictures/room1.png</iconset>
      </property>
     </item>
     <item>
@@ -202,7 +151,58 @@ border:1px solid black
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../pictures/room3.png</normaloff>../../../../../pictures/room3.png</iconset>
+       <normaloff>../../../pictures/room3.png</normaloff>../../../pictures/room3.png</iconset>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>  办理入住</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>FontAwesome</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../pictures/room2.png</normaloff>../../../pictures/room2.png</iconset>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>  预定登记和取消</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>FontAwesome</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../pictures/room4.png</normaloff>../../../pictures/room4.png</iconset>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>  办理退房</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>FontAwesome</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../pictures/room5.png</normaloff>../../../pictures/room5.png</iconset>
      </property>
     </item>
    </widget>
@@ -224,8 +224,8 @@ border:1px solid black
     <widget class="QToolButton" name="head">
      <property name="geometry">
       <rect>
-       <x>60</x>
-       <y>20</y>
+       <x>70</x>
+       <y>30</y>
        <width>60</width>
        <height>60</height>
       </rect>
@@ -235,7 +235,7 @@ border:1px solid black
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../pictures/staff3.png</normaloff>../../../../../pictures/staff3.png</iconset>
+       <normaloff>../../../pictures/staff3.png</normaloff>../../../pictures/staff3.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -247,8 +247,8 @@ border:1px solid black
     <widget class="QLabel" name="welcome">
      <property name="geometry">
       <rect>
-       <x>30</x>
-       <y>90</y>
+       <x>40</x>
+       <y>110</y>
        <width>110</width>
        <height>20</height>
       </rect>
@@ -263,8 +263,8 @@ border:1px solid black
     <widget class="QLabel" name="label_2">
      <property name="geometry">
       <rect>
-       <x>40</x>
-       <y>140</y>
+       <x>80</x>
+       <y>190</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -274,472 +274,11 @@ border:1px solid black
        <pointsize>8</pointsize>
       </font>
      </property>
+     <property name="styleSheet">
+      <string notr="true">color: rgb(255, 0, 0);</string>
+     </property>
      <property name="text">
       <string>*表示需要最高权限</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="Search">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>170</y>
-       <width>145</width>
-       <height>25</height>
-      </rect>
-     </property>
-     <property name="palette">
-      <palette>
-       <active>
-        <colorrole role="WindowText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Button">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Light">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Midlight">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Dark">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Mid">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>170</red>
-           <green>170</green>
-           <blue>170</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Text">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="BrightText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ButtonText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Window">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Shadow">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="AlternateBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>220</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="PlaceholderText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="128">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </active>
-       <inactive>
-        <colorrole role="WindowText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Button">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Light">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Midlight">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Dark">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Mid">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>170</red>
-           <green>170</green>
-           <blue>170</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Text">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="BrightText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ButtonText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Window">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Shadow">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="AlternateBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>220</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="PlaceholderText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="128">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </inactive>
-       <disabled>
-        <colorrole role="WindowText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Button">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Light">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Midlight">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Dark">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Mid">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>170</red>
-           <green>170</green>
-           <blue>170</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Text">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="BrightText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ButtonText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>127</red>
-           <green>127</green>
-           <blue>127</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Window">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>41</red>
-           <green>56</green>
-           <blue>70</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="Shadow">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="AlternateBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipBase">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>255</red>
-           <green>255</green>
-           <blue>220</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="ToolTipText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>0</red>
-           <green>0</green>
-           <blue>0</blue>
-          </color>
-         </brush>
-        </colorrole>
-        <colorrole role="PlaceholderText">
-         <brush brushstyle="SolidPattern">
-          <color alpha="128">
-           <red>255</red>
-           <green>255</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </disabled>
-      </palette>
-     </property>
-     <property name="font">
-      <font>
-       <family>微软雅黑</family>
-       <pointsize>7</pointsize>
-      </font>
-     </property>
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
-     <property name="placeholderText">
-      <string>搜索</string>
      </property>
     </widget>
     <widget class="QToolButton" name="toolButton">
@@ -762,7 +301,7 @@ border-radius:5px</string>
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../pictures/search.png</normaloff>../../../../../pictures/search.png</iconset>
+       <normaloff>../../../pictures/search.png</normaloff>../../../pictures/search.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -774,8 +313,8 @@ border-radius:5px</string>
     <widget class="QLabel" name="role">
      <property name="geometry">
       <rect>
-       <x>30</x>
-       <y>120</y>
+       <x>50</x>
+       <y>150</y>
        <width>110</width>
        <height>15</height>
       </rect>
@@ -831,7 +370,7 @@ border-radius:5px</string>
       </property>
       <property name="icon">
        <iconset>
-        <normaloff>../../../../../pictures/search1.png</normaloff>../../../../../pictures/search1.png</iconset>
+        <normaloff>../../../pictures/search1.png</normaloff>../../../pictures/search1.png</iconset>
       </property>
       <property name="toolButtonStyle">
        <enum>Qt::ToolButtonTextBesideIcon</enum>
@@ -889,7 +428,7 @@ background-color:#CCFFCC</string>
       </item>
       <item>
        <property name="text">
-        <string>总统套房</string>
+        <string>行政套房</string>
        </property>
       </item>
      </widget>
@@ -1061,7 +600,7 @@ background-color:#CCFFCC</string>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">#commitSearch{background:#CCFFCC;
+       <string notr="true">#commitSearch{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitSearch:hover
 {
@@ -1128,19 +667,6 @@ background:#CCFF99
        </time>
       </property>
      </widget>
-     <widget class="Line" name="line_16">
-      <property name="geometry">
-       <rect>
-        <x>390</x>
-        <y>140</y>
-        <width>20</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
      <widget class="QScrollArea" name="scrollArea">
       <property name="geometry">
        <rect>
@@ -1176,7 +702,7 @@ background:#CCFF99
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>580</width>
+         <width>588</width>
          <height>341</height>
         </rect>
        </property>
@@ -1207,7 +733,7 @@ background:#CCFF99
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">#reset{background:#CCFFCC;
+       <string notr="true">#reset{background:rgb(85, 170, 255);
 border-radius:8px}
 #reset:hover
 {
@@ -1216,6 +742,19 @@ background:#CCFF99
       </property>
       <property name="text">
        <string>重置</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_73">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>140</y>
+        <width>101</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>预计退房时间：</string>
       </property>
      </widget>
     </widget>
@@ -1245,7 +784,7 @@ background:#CCFF99
       </property>
       <property name="icon">
        <iconset>
-        <normaloff>../../../../../pictures/search1.png</normaloff>../../../../../pictures/search1.png</iconset>
+        <normaloff>../../../pictures/search1.png</normaloff>../../../pictures/search1.png</iconset>
       </property>
       <property name="toolButtonStyle">
        <enum>Qt::ToolButtonTextBesideIcon</enum>
@@ -1259,6 +798,9 @@ background:#CCFF99
         <width>611</width>
         <height>41</height>
        </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
       </property>
       <property name="flow">
        <enum>QListView::LeftToRight</enum>
@@ -1289,7 +831,7 @@ background:#CCFF99
        </rect>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="page_6">
        <widget class="Line" name="line_4">
@@ -1589,7 +1131,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitCheckin{background:#CCFFCC;
+         <string notr="true">#commitCheckin{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitCheckin:hover
 {
@@ -1864,7 +1406,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitCheckinTeam{background:#CCFFCC;
+         <string notr="true">#commitCheckinTeam{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitCheckinTeam:hover
 {
@@ -2112,7 +1654,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitrtcC{background:#CCFFCC;
+         <string notr="true">#commitrtcC{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitrtcC:hover
 {
@@ -2133,7 +1675,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitrtcT{background:#CCFFCC;
+         <string notr="true">#commitrtcT{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitrtcT:hover
 {
@@ -2149,7 +1691,7 @@ background:#CCFF99
      <widget class="Line" name="line_2">
       <property name="geometry">
        <rect>
-        <x>60</x>
+        <x>70</x>
         <y>40</y>
         <width>20</width>
         <height>21</height>
@@ -2162,7 +1704,7 @@ background:#CCFF99
      <widget class="Line" name="line_3">
       <property name="geometry">
        <rect>
-        <x>140</x>
+        <x>160</x>
         <y>40</y>
         <width>20</width>
         <height>21</height>
@@ -2199,7 +1741,7 @@ background:#CCFF99
       </property>
       <property name="icon">
        <iconset>
-        <normaloff>../../../../../pictures/search1.png</normaloff>../../../../../pictures/search1.png</iconset>
+        <normaloff>../../../pictures/search1.png</normaloff>../../../pictures/search1.png</iconset>
       </property>
       <property name="toolButtonStyle">
        <enum>Qt::ToolButtonTextBesideIcon</enum>
@@ -2569,7 +2111,7 @@ background-color:#CCFFCC</string>
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitBookingClient{background:#CCFFCC;
+         <string notr="true">#commitBookingClient{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitBookingClient:hover
 {
@@ -2877,7 +2419,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitBookingTeam{background:#CCFFCC;
+         <string notr="true">#commitBookingTeam{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitBookingTeam:hover
 {
@@ -2983,7 +2525,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitDeBookT{background:#CCFFCC;
+         <string notr="true">#commitDeBookT{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitDeBookT:hover
 {
@@ -3041,7 +2583,7 @@ background:#CCFF99
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitDeBookC{background:#CCFFCC;
+         <string notr="true">#commitDeBookC{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitDeBookC:hover
 {
@@ -3190,7 +2732,7 @@ background:#CCFF99
      <widget class="Line" name="line_11">
       <property name="geometry">
        <rect>
-        <x>60</x>
+        <x>70</x>
         <y>40</y>
         <width>20</width>
         <height>21</height>
@@ -3203,7 +2745,7 @@ background:#CCFF99
      <widget class="Line" name="line_12">
       <property name="geometry">
        <rect>
-        <x>140</x>
+        <x>160</x>
         <y>40</y>
         <width>20</width>
         <height>21</height>
@@ -3240,7 +2782,7 @@ background:#CCFF99
       </property>
       <property name="icon">
        <iconset>
-        <normaloff>../../../../../pictures/search1.png</normaloff>../../../../../pictures/search1.png</iconset>
+        <normaloff>../../../pictures/search1.png</normaloff>../../../pictures/search1.png</iconset>
       </property>
       <property name="toolButtonStyle">
        <enum>Qt::ToolButtonTextBesideIcon</enum>
@@ -3494,22 +3036,6 @@ background-color:#CCFFCC</string>
        <string>支付方式：</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="paytype_checkout">
-      <property name="geometry">
-       <rect>
-        <x>300</x>
-        <y>360</y>
-        <width>221</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="placeholderText">
-       <string>支付方式</string>
-      </property>
-     </widget>
      <widget class="QPushButton" name="commitCheckout">
       <property name="geometry">
        <rect>
@@ -3520,7 +3046,7 @@ background-color:#CCFFCC</string>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">#commitCheckout{background:#CCFFCC;
+       <string notr="true">#commitCheckout{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitCheckout:hover
 {
@@ -3563,6 +3089,34 @@ background:#CCFF99
        <string>* 多个房间可用逗号隔开</string>
       </property>
      </widget>
+     <widget class="QComboBox" name="comboBox">
+      <property name="geometry">
+       <rect>
+        <x>300</x>
+        <y>360</y>
+        <width>221</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="placeholderText">
+       <string>请选择支付方式</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>微信</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>支付宝</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>银行卡</string>
+       </property>
+      </item>
+     </widget>
     </widget>
     <widget class="QWidget" name="page_5">
      <widget class="QToolButton" name="toolButton_6">
@@ -3590,7 +3144,7 @@ background:#CCFF99
       </property>
       <property name="icon">
        <iconset>
-        <normaloff>../../../../../pictures/search1.png</normaloff>../../../../../pictures/search1.png</iconset>
+        <normaloff>../../../pictures/search1.png</normaloff>../../../pictures/search1.png</iconset>
       </property>
       <property name="toolButtonStyle">
        <enum>Qt::ToolButtonTextBesideIcon</enum>
@@ -3620,11 +3174,102 @@ background-color:#CCFFCC</string>
      <widget class="QListWidget" name="listWidget_4">
       <property name="geometry">
        <rect>
-        <x>-10</x>
+        <x>0</x>
         <y>30</y>
         <width>611</width>
         <height>41</height>
        </rect>
+      </property>
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Button">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Window">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Button">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Window">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Button">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Window">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>204</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
       </property>
       <property name="flow">
        <enum>QListView::LeftToRight</enum>
@@ -3643,7 +3288,7 @@ background-color:#CCFFCC</string>
      <widget class="Line" name="line_15">
       <property name="geometry">
        <rect>
-        <x>60</x>
+        <x>80</x>
         <y>40</y>
         <width>20</width>
         <height>21</height>
@@ -3676,7 +3321,7 @@ background-color:#CCFFCC</string>
          </rect>
         </property>
         <property name="styleSheet">
-         <string notr="true">#commitAddRoom{background:#CCFFCC;
+         <string notr="true">#commitAddRoom{background:rgb(85, 170, 255);
 border-radius:8px}
 #commitAddRoom:hover
 {
@@ -4011,7 +3656,7 @@ border-radius:5px</string>
          </property>
          <property name="icon">
           <iconset>
-           <normaloff>../../../../../pictures/search.png</normaloff>../../../../../pictures/search.png</iconset>
+           <normaloff>../../../pictures/search.png</normaloff>../../../pictures/search.png</iconset>
          </property>
          <property name="toolButtonStyle">
           <enum>Qt::ToolButtonTextBesideIcon</enum>
