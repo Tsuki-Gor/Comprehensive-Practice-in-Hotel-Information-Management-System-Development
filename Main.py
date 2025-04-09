@@ -15,7 +15,9 @@ localConfig = {
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    # 数据库用户名
+    'passwd': 'Tsuki',
+    # 数据库密码
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -67,7 +69,7 @@ localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': 'Tsuki',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
