@@ -18,7 +18,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../../../../pictures/酒店.png</normaloff>../../../../../../pictures/酒店.png</iconset>
+    <normaloff>../../../pictures/酒店.png</normaloff>../../../pictures/酒店.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">QMainWindow{
@@ -80,7 +80,7 @@ background:#e1e9ed;
     </property>
     <property name="icon">
      <iconset>
-      <normaloff>../../../../../pictures/chart.png</normaloff>../../../../../pictures/chart.png</iconset>
+      <normaloff>../../../pictures/chart.png</normaloff>../../../pictures/chart.png</iconset>
     </property>
     <property name="iconSize">
      <size>
@@ -113,7 +113,7 @@ background:#e1e9ed;
     </property>
     <property name="icon">
      <iconset>
-      <normaloff>../../../../../pictures/coffee.png</normaloff>../../../../../pictures/coffee.png</iconset>
+      <normaloff>../../../pictures/coffee.png</normaloff>../../../pictures/coffee.png</iconset>
     </property>
     <property name="iconSize">
      <size>
@@ -149,7 +149,7 @@ background:#e1e9ed;
     </property>
     <property name="icon">
      <iconset>
-      <normaloff>../../../../../pictures/staff.png</normaloff>../../../../../pictures/staff.png</iconset>
+      <normaloff>../../../pictures/staff.png</normaloff>../../../pictures/staff.png</iconset>
     </property>
     <property name="iconSize">
      <size>
@@ -217,7 +217,7 @@ background:#e1e9ed;
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>../../../../../pictures/hotel.png</normaloff>../../../../../pictures/hotel.png</iconset>
+       <normaloff>../../../pictures/hotel.png</normaloff>../../../pictures/hotel.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -242,6 +242,29 @@ background:#e1e9ed;
       <string>修改密码</string>
      </property>
     </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>771</width>
+       <height>451</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/bg.png</pixmap>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <zorder>toolButton_7</zorder>
+    <zorder>label_3</zorder>
+    <zorder>welcome</zorder>
+    <zorder>modifyPwd</zorder>
    </widget>
    <widget class="QLabel" name="label">
     <property name="geometry">
@@ -390,6 +413,15 @@ background:#e1e9ed;
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
       </active>
       <inactive>
        <colorrole role="WindowText">
@@ -521,6 +553,15 @@ background:#e1e9ed;
        <colorrole role="ToolTipText">
         <brush brushstyle="SolidPattern">
          <color alpha="255">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
           <red>0</red>
           <green>0</green>
           <blue>0</blue>
@@ -664,6 +705,15 @@ background:#e1e9ed;
          </color>
         </brush>
        </colorrole>
+       <colorrole role="PlaceholderText">
+        <brush brushstyle="NoBrush">
+         <color alpha="128">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
       </disabled>
      </palette>
     </property>
@@ -676,8 +726,35 @@ background:#e1e9ed;
      <string>酒店管理系统--冉熙</string>
     </property>
    </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>-7</x>
+      <y>181</y>
+      <width>791</width>
+      <height>431</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="C:/Users/Lenovo/Desktop/pic.qrc">:/pictures/D:/pictures/bg.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <zorder>label_2</zorder>
+   <zorder>chartbutton</zorder>
+   <zorder>roombutton</zorder>
+   <zorder>staffbutton</zorder>
+   <zorder>frame</zorder>
+   <zorder>label</zorder>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="C:/Users/Lenovo/Desktop/pic.qrc"/>
+ </resources>
  <connections/>
 </ui>

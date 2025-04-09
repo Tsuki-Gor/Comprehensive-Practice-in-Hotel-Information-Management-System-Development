@@ -9,13 +9,14 @@ from PyQt5.Qt import *
 # 从 PyQt5.QtCore 模块导入 Qt 类，用于访问 Qt 框架的核心常量和枚举
 from PyQt5.QtCore import Qt
 # 定义数据库配置字典 localConfig，包含数据库连接所需的各项参数
+from decimal import Decimal
 localConfig = {
     'host': 'localhost',
     # 数据库主机地址
     'port': 3306,
     # 数据库端口号
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     # 要连接的数据库名称
     'charset': 'utf8',
@@ -63,11 +64,12 @@ from collections import defaultdict
 
 import re
 
+
 localConfig = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'passwd': '123456',
+    'passwd': '315225zhang',
     'db': 'dbdesign',
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
@@ -90,6 +92,261 @@ def get_staff():#员工账户
     global staff
     return staff
 
+
+class Database:
+    """数据库操作类"""
+    def __init__(self):
+        self.conn = pymysql.connect(**localConfig)
+        self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+
+    def query(self, sql, params=None):
+        """执行查询 SQL"""
+        self.cursor.execute(sql, params or ())
+        return self.cursor.fetchall()
+
+    def execute(self, sql, params=None):
+        """执行 INSERT、UPDATE、DELETE"""
+        self.cursor.execute(sql, params or ())
+        self.conn.commit()
+        return self.cursor.lastrowid
+
+    def close(self):
+        """关闭数据库连接"""
+        self.cursor.close()
+        self.conn.close()
+
+class InvoiceManager:
+    """发票管理类"""
+
+    @staticmethod
+    def fetch_invoice_summary(invoice_id=None, order_id=None, client_or_team_id=None, ordertype=None):
+        """查询发票信息"""
+        db = Database()
+        sql = "SELECT * FROM v_invoice_summary WHERE 1=1"
+        params = []
+        if invoice_id:
+            sql += " AND invoice_id = %s"
+            params.append(invoice_id)
+        if order_id:
+            sql += " AND order_id = %s"
+            params.append(order_id)
+        if client_or_team_id:
+            sql += " AND client_or_team_id = %s"
+            params.append(client_or_team_id)
+        if ordertype:
+            sql += " AND ordertype = %s"
+            params.append(ordertype)
+
+        result = db.query(sql, params)
+        db.close()
+        return result
+
+    @staticmethod
+    def create_invoice(order_id, invoice_title, invoice_amount, invoice_type='Electronic', tax_number=None, remark=None):
+        """创建新发票"""
+        db = Database()
+        sql = """
+            INSERT INTO invoice (order_id, invoice_title, invoice_type, invoice_amount, tax_number, invoice_status, remark)
+            VALUES (%s, %s, %s, %s, %s, 'pending', %s)
+        """
+        new_invoice_id = db.execute(sql, (order_id, invoice_title, invoice_type, invoice_amount, tax_number, remark))
+        db.close()
+        return new_invoice_id
+
+    @staticmethod
+    def update_invoice_status(invoice_id, status):
+        """更新发票状态"""
+        if status not in ['issued', 'cancelled']:
+            return {"error": "无效的状态"}
+
+        db = Database()
+        sql = "UPDATE invoice SET invoice_status = %s, issue_time = %s WHERE invoice_id = %s"
+        db.execute(sql, (status, datetime.utcnow(), invoice_id))
+        db.close()
+        return {"message": f"发票状态已更新为 {status}"}
+
+
+class Payment:
+    """
+    支付记录模型，对应表 payment
+    """
+    def __init__(self, payment_id: int = None, order_id: int = None,
+                 pay_amount: Decimal = Decimal("0.00"), pay_method: str = "",
+                 payment_status: str = "pending", transaction_id: str = None,
+                 pay_time: datetime = None, remark: str = None):
+        self.payment_id = payment_id
+        self.order_id = order_id
+        self.pay_amount = pay_amount
+        self.pay_method = pay_method
+        self.payment_status = payment_status
+        self.transaction_id = transaction_id
+        self.pay_time = pay_time if pay_time else datetime.now()
+        self.remark = remark
+
+    def __repr__(self):
+        return (f"Payment(payment_id={self.payment_id}, order_id={self.order_id}, "
+                f"pay_amount={self.pay_amount}, pay_method='{self.pay_method}', "
+                f"payment_status='{self.payment_status}', transaction_id='{self.transaction_id}', "
+                f"pay_time='{self.pay_time}', remark='{self.remark}')")
+
+
+class PaymentDetail:
+    """
+    支付详情模型，对应视图 v_payment_details
+    视图字段：payment_id, order_id, client_or_team_id, ordertype, pay_amount,
+            pay_method, payment_status, transaction_id, pay_time
+    """
+    def __init__(self, payment_id: int, order_id: int, client_or_team_id: str,
+                 ordertype: str, pay_amount: Decimal, pay_method: str,
+                 payment_status: str, transaction_id: str, pay_time: datetime):
+        self.payment_id = payment_id
+        self.order_id = order_id
+        self.client_or_team_id = client_or_team_id
+        self.ordertype = ordertype
+        self.pay_amount = pay_amount
+        self.pay_method = pay_method
+        self.payment_status = payment_status
+        self.transaction_id = transaction_id
+        self.pay_time = pay_time
+
+    def __repr__(self):
+        return (f"PaymentDetail(payment_id={self.payment_id}, order_id={self.order_id}, "
+                f"client_or_team_id='{self.client_or_team_id}', ordertype='{self.ordertype}', "
+                f"pay_amount={self.pay_amount}, pay_method='{self.pay_method}', "
+                f"payment_status='{self.payment_status}', transaction_id='{self.transaction_id}', "
+                f"pay_time='{self.pay_time}')")
+
+
+# -------------------------------
+# 2. 数据访问层（PaymentRepository）
+# -------------------------------
+
+class PaymentRepository:
+    """
+    封装支付记录的所有数据库操作
+    """
+    def __init__(self, db: Database):
+        self.db = db
+
+    def get_payment_by_id(self, payment_id: int) -> Payment:
+        sql = "SELECT * FROM payment WHERE payment_id = %s"
+        result = self.db.query(sql, (payment_id,))
+        if result:
+            row = result[0]
+            return Payment(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time'],
+                remark=row['remark']
+            )
+        return None
+
+    def get_all_payments(self) -> list:
+        sql = "SELECT * FROM payment"
+        results = self.db.query(sql)
+        payments = []
+        for row in results:
+            payments.append(Payment(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time'],
+                remark=row['remark']
+            ))
+        return payments
+
+    def insert_payment(self, payment: Payment) -> int:
+        sql = ("INSERT INTO payment (order_id, pay_amount, pay_method, payment_status, "
+               "transaction_id, pay_time, remark) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+        params = (payment.order_id, payment.pay_amount, payment.pay_method, payment.payment_status,
+                  payment.transaction_id, payment.pay_time, payment.remark)
+        payment_id = self.db.execute(sql, params)
+        payment.payment_id = payment_id
+        return payment_id
+
+    def update_payment(self, payment: Payment) -> bool:
+        sql = ("UPDATE payment SET order_id=%s, pay_amount=%s, pay_method=%s, payment_status=%s, "
+               "transaction_id=%s, pay_time=%s, remark=%s WHERE payment_id=%s")
+        params = (payment.order_id, payment.pay_amount, payment.pay_method, payment.payment_status,
+                  payment.transaction_id, payment.pay_time, payment.remark, payment.payment_id)
+        self.db.execute(sql, params)
+        return True
+
+    def delete_payment(self, payment_id: int) -> bool:
+        sql = "DELETE FROM payment WHERE payment_id = %s"
+        self.db.execute(sql, (payment_id,))
+        return True
+
+    def get_payment_details_by_order_id(self, order_id: int) -> list:
+        """
+        从视图中查询指定订单的支付详情
+        """
+        sql = "SELECT * FROM v_payment_details WHERE order_id = %s"
+        results = self.db.query(sql, (order_id,))
+        details = []
+        for row in results:
+            details.append(PaymentDetail(
+                payment_id=row['payment_id'],
+                order_id=row['order_id'],
+                client_or_team_id=row['client_or_team_id'],
+                ordertype=row['ordertype'],
+                pay_amount=row['pay_amount'],
+                pay_method=row['pay_method'],
+                payment_status=row['payment_status'],
+                transaction_id=row['transaction_id'],
+                pay_time=row['pay_time']
+            ))
+        return details
+
+
+# -------------------------------
+# 3. 业务逻辑层（PaymentService）
+# -------------------------------
+
+class PaymentService:
+    """
+    处理支付记录的业务逻辑，例如数据校验、异常处理等
+    """
+    def __init__(self, repository: PaymentRepository):
+        self.repository = repository
+
+    def create_payment(self, payment: Payment) -> Payment:
+        # 简单的校验：支付金额必须大于0
+        if payment.pay_amount <= 0:
+            raise ValueError("支付金额必须大于0")
+        payment_id = self.repository.insert_payment(payment)
+        payment.payment_id = payment_id
+        return payment
+
+    def update_payment(self, payment: Payment) -> Payment:
+        if not payment.payment_id or payment.payment_id <= 0:
+            raise ValueError("支付记录ID无效")
+        self.repository.update_payment(payment)
+        return payment
+
+    def remove_payment(self, payment_id: int) -> bool:
+        if payment_id <= 0:
+            raise ValueError("支付记录ID无效")
+        return self.repository.delete_payment(payment_id)
+
+    def find_payment_by_id(self, payment_id: int) -> Payment:
+        return self.repository.get_payment_by_id(payment_id)
+
+    def list_payments(self) -> list:
+        return self.repository.get_all_payments()
+
+    def get_payment_details(self, order_id: int) -> list:
+        """
+        查询指定订单的支付详情（来自视图）
+        """
+        return self.repository.get_payment_details_by_order_id(order_id)
 
 class Staff:
     """
@@ -1888,37 +2145,35 @@ class Ui_HomeWindow(object):
         MainWindow.resize(800, 600)
         MainWindow.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("references/pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("../../../pictures/酒店.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
-        MainWindow.setStyleSheet("\n"
-"  QToolButton {\n"
-"    background: #EAF7FF;\n"
-"    border-radius: 15px;\n"
-"    border: 1px solid #a0c0d0;  /* 添加边框 */\n"
-"    padding: 8px;  /* 内边距 */\n"
-"    font-size: 14px;\n"
-"    font-weight: bold;\n"
-"    transition: all 0.3s ease;  /* 平滑过渡 */\n"
-"  }\n"
-"\n"
-"  QToolButton:hover {\n"
-"    background: #49ebff;\n"
-"    border-color: #30a0c0;\n"
-"    box-shadow: 0 4px 12px rgba(73, 235, 255, 0.3);  /* 悬浮阴影 */\n"
-"  }\n"
-"\n"
-"  QToolButton:pressed {\n"
-"    background: #30a0c0;\n"
-"    transform: translateY(2px);  /* 按下下沉效果 */\n"
-"  }\n"
-"\n"
-"  /* 单独调整图标按钮样式 */\n"
-"  #toolButton_7 {\n"
-"    background: transparent;  /* 透明背景 */\n"
-"    border: none;\n"
-"    icon-size: 80px;  /* 放大图标 */\n"
-"  }\n"
-" ")
+        MainWindow.setStyleSheet("QMainWindow{\n"
+"border-radius:15px\n"
+"}\n"
+"QWidget{\n"
+"border-radius:15px;\n"
+"}\n"
+"#frame{\n"
+"background: #e1e9ed;}\n"
+"QToolButton{\n"
+"background:#EAF7FF;\n"
+"border-radius:15px;\n"
+"}\n"
+"QToolButton:hover{\n"
+"background:#EAF7FF;\n"
+"border-radius:15px;\n"
+"background:#49ebff;\n"
+"}\n"
+"#label{\n"
+"text-align:center;\n"
+"}\n"
+"#welcome{\n"
+"text-align:center;\n"
+"}\n"
+"#toolButton_7\n"
+"{\n"
+"background:#e1e9ed;\n"
+"}")
         MainWindow.setTabShape(QtWidgets.QTabWidget.Rounded)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -1927,7 +2182,6 @@ class Ui_HomeWindow(object):
         self.chartbutton.setMinimumSize(QtCore.QSize(200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.chartbutton.setFont(font)
@@ -1941,16 +2195,13 @@ class Ui_HomeWindow(object):
         self.roombutton.setGeometry(QtCore.QRect(40, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.roombutton.setFont(font)
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap("references/pictures/room.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.roombutton.setIcon(icon2)
-        self.roombutton.setIconSize(QtCore.QSize(50, 50))
-        self.roombutton.setCheckable(False)
-        self.roombutton.setChecked(False)
+        self.roombutton.setIconSize(QtCore.QSize(80, 80))
         self.roombutton.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.roombutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.roombutton.setObjectName("roombutton")
@@ -1958,14 +2209,13 @@ class Ui_HomeWindow(object):
         self.staffbutton.setGeometry(QtCore.QRect(290, 340, 200, 120))
         font = QtGui.QFont()
         font.setFamily("幼圆")
-        font.setPointSize(-1)
         font.setBold(True)
         font.setWeight(75)
         self.staffbutton.setFont(font)
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap("references/pictures/employee.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.staffbutton.setIcon(icon3)
-        self.staffbutton.setIconSize(QtCore.QSize(55, 55))
+        self.staffbutton.setIconSize(QtCore.QSize(80, 80))
         self.staffbutton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.staffbutton.setObjectName("staffbutton")
         self.frame = QtWidgets.QFrame(self.centralwidget)
@@ -1985,9 +2235,7 @@ class Ui_HomeWindow(object):
         self.toolButton_7 = QtWidgets.QToolButton(self.frame)
         self.toolButton_7.setGeometry(QtCore.QRect(370, 70, 71, 71))
         font = QtGui.QFont()
-        font.setPointSize(-1)
-        font.setBold(True)
-        font.setWeight(75)
+        font.setPointSize(9)
         self.toolButton_7.setFont(font)
         self.toolButton_7.setText("")
         icon4 = QtGui.QIcon()
@@ -1996,21 +2244,19 @@ class Ui_HomeWindow(object):
         self.toolButton_7.setIconSize(QtCore.QSize(100, 100))
         self.toolButton_7.setObjectName("toolButton_7")
         self.modifyPwd = QtWidgets.QToolButton(self.frame)
-        self.modifyPwd.setGeometry(QtCore.QRect(710, 130, 81, 31))
-        self.modifyPwd.setStyleSheet("\n"
-"    background: rgba(225,233,237,0.8);\n"
-"    color: #2980b9;\n"
-"    border-radius: 10px;\n"
-"    border: 1px solid #a0c0d0;\n"
-"    padding: 2px 8px;\n"
-"   ")
+        self.modifyPwd.setGeometry(QtCore.QRect(710, 150, 81, 21))
+        self.modifyPwd.setStyleSheet("background:#e1e9ed")
         self.modifyPwd.setObjectName("modifyPwd")
         self.label_3 = QtWidgets.QLabel(self.frame)
-        self.label_3.setGeometry(QtCore.QRect(0, 170, 801, 16))
+        self.label_3.setGeometry(QtCore.QRect(0, 0, 771, 451))
         self.label_3.setText("")
-        self.label_3.setPixmap(QtGui.QPixmap("references/pictures/line.png"))
+        self.label_3.setPixmap(QtGui.QPixmap("references/pictures/bg.png"))
         self.label_3.setScaledContents(True)
         self.label_3.setObjectName("label_3")
+        self.toolButton_7.raise_()
+        self.label_3.raise_()
+        self.welcome.raise_()
+        self.modifyPwd.raise_()
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(310, 540, 181, 41))
         palette = QtGui.QPalette()
@@ -2164,9 +2410,9 @@ class Ui_HomeWindow(object):
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
-        self.label_2.setGeometry(QtCore.QRect(0, 0, 801, 601))
+        self.label_2.setGeometry(QtCore.QRect(-7, 181, 791, 431))
         self.label_2.setText("")
-        self.label_2.setPixmap(QtGui.QPixmap("references/pictures/home_bg.png"))
+        self.label_2.setPixmap(QtGui.QPixmap("references/pictures/bg.png"))
         self.label_2.setScaledContents(True)
         self.label_2.setObjectName("label_2")
         self.label_2.raise_()
