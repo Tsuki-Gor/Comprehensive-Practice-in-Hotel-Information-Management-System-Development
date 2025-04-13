@@ -815,6 +815,7 @@ class Room:
             return False
         self.cursor.execute("select * from client where cid=%s",(cid))
         data = self.cursor.fetchall()
+        # 如果没有这个人，就添加这个人
         if data == ():
             self.cursor.execute("insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) "
                                 "values(%s,%s,%s,%s,%s,%s,%s)",(cname,cid,cphone,cage,csex,self.staff.sid,0))
@@ -1133,9 +1134,16 @@ class Room:
                     INSERT INTO hotelorder_v1 (id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
                 """, (cid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
+                
+                # 获取新插入订单的ID
+                order_id = self.cursor.lastrowid
 
                 # 删除入住记录
                 self.cursor.execute("DELETE FROM checkin_client WHERE rid=%s AND cid=%s", (rid_out, cid_out))
+
+                # 记录订单创建历史
+                order_manager = OrderStatusManager(self.db)
+                order_manager.update_order_status(order_id, 'pending', self.staff.sid, "退房创建订单")
 
                 # 提交事务
                 self.db.commit()
@@ -1166,11 +1174,19 @@ class Room:
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
                     """, (tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
 
+                    # 获取新插入订单的ID
+                    order_ids.append(self.cursor.lastrowid)
+
                     # 删除入住记录
                     self.cursor.execute("DELETE FROM checkin_team WHERE rid=%s AND tid=%s", (rid_out, tid_out))
 
                 # 提交事务
                 self.db.commit()
+
+                # 记录订单创建历史
+                order_manager = OrderStatusManager(self.db)
+                for order_id in order_ids:
+                    order_manager.update_order_status(order_id, 'pending', self.staff.sid, "团队退房创建订单")
 
                 QMessageBox().information(None, "提示", f"本次团队订单总计支付 {total_sum}，订单已生成！",
                                           QMessageBox.Yes)
@@ -2949,12 +2965,92 @@ class RoomOp(QMainWindow, Ui_RoomWindow):
             QMessageBox().information(None, "提示", "结束时间必须大于开始时间！", QMessageBox.Yes)
             return False
         rid = self.rid_checkout.text()
-        pay_type = self.paytype_checkout.text()
+        # pay_type = self.paytype_checkout.text()
+        # 支付方式中英文映射字典
+        payment_method_map = {
+            '微信': 'WeChat',
+            '支付宝': 'Alipay', 
+            '信用卡': 'Credit Card',
+            '现金': 'Cash',
+            '银行转账': 'Bank Transfer'
+        }
+        
+        pay_type = payment_method_map.get(self.comboBox.currentText())
+        if not pay_type:
+            QMessageBox().information(None, "提示", "不支持的支付方式！", QMessageBox.Yes)
+            return False
+        
         remark = self.remark_checkout.text()
+
         r = Room()
         ret = r.checkoutDB(check_type,id,rid,pay_type,remark)
+
+        # if ret:
+        #     QMessageBox().information(None, "提示", "退房成功！", QMessageBox.Yes)
+
         if ret:
-            QMessageBox().information(None, "提示", "退房成功！", QMessageBox.Yes)
+            # 获取订单ID（假设checkoutDB方法返回了订单ID，如果没有，需要查询）
+            try:
+                # 查询订单ID
+                r.cursor.execute("""
+                    SELECT order_id FROM hotelorder_v1 
+                    WHERE id = %s AND rid = %s AND ordertype = %s
+                    ORDER BY order_id DESC LIMIT 1
+                """, (id, rid, check_type))
+                order_data = r.cursor.fetchone()
+                
+                if order_data:
+                    order_id = order_data['order_id']
+                    
+                    # 使用OrderService处理订单状态
+                    order_service = OrderService()
+                    
+                    # 检查支付状态，如果未支付，先处理支付
+                    order_details = order_service.getOrderDetails(order_id)
+                    if order_details and order_details['pay_status'] != 'paid':
+                        # 弹出输入框让用户输入支付金额
+                        amount, ok = QInputDialog.getDouble(
+                            None, 
+                            "支付确认",
+                            f"订单金额: {order_details['money']}\n请输入支付金额:",
+                            value=float(order_details['money']),
+                            min=0.0,
+                            max=100000.0,
+                            decimals=2
+                        )
+                        
+                        if ok:
+                            # 处理支付
+                            payment_success = order_service.processPayment(
+                                order_id,
+                                pay_type,
+                                amount,
+                                f"退房时支付，支付方式：{pay_type}"
+                            )
+                        else:
+                            QMessageBox().information(None, "提示", "取消支付操作", QMessageBox.Yes)
+                            return False
+                        if not payment_success:
+                            QMessageBox().information(None, "提示", "订单支付处理失败，请检查支付信息！", QMessageBox.Yes)
+                            return False
+                    
+                    # 完成订单
+                    completion_success = order_service.completeOrder(
+                        order_id, 
+                        f"退房完成，备注：{remark}"
+                    )
+                    
+                    if completion_success:
+                        QMessageBox().information(None, "提示", "退房成功，订单已完成！", QMessageBox.Yes)
+                    else:
+                        QMessageBox().information(None, "提示", "退房成功，但订单状态更新失败，请联系管理员！", QMessageBox.Yes)
+                else:
+                    QMessageBox().information(None, "提示", "退房成功，但未找到相关订单信息！", QMessageBox.Yes)
+            except Exception as e:
+                print(f"处理订单状态时出错: {e}")
+                QMessageBox().information(None, "提示", "退房成功，但订单状态处理失败！", QMessageBox.Yes)
+        else:
+            QMessageBox().information(None, "提示", "退房失败，请检查输入信息！", QMessageBox.Yes)
 
     def showRoomInfo(self):
         r = Room()
@@ -3263,6 +3359,451 @@ class mpWindow(QMainWindow, Ui_MpwdWindow):
         else:
             QMessageBox().information(None, "提示", "修改密码失败！", QMessageBox.Yes)
 
+# ... 现有代码 ...
+
+class OrderStatusManager:
+    """
+    订单状态管理类
+    负责处理订单状态和支付状态的变更，并记录状态变更历史
+    """
+    def __init__(self, db):
+        self.db = db
+        self.cursor = db.cursor()
+    
+    def update_order_status(self, order_id, new_status, staff_id, remark=None):
+        """
+        更新订单状态并记录变更历史
+        
+        参数:
+            order_id: 订单ID
+            new_status: 新状态 ('pending', 'paid', 'cancelled', 'completed')
+            staff_id: 操作员工ID
+            remark: 备注信息
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            # 获取当前订单状态
+            self.cursor.execute("SELECT order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
+            result = self.cursor.fetchone()
+            if not result:
+                return False
+                
+            previous_status = result['order_status']
+            
+            # 如果状态没有变化，直接返回成功
+            if previous_status == new_status:
+                return True
+                
+            # 更新订单状态
+            self.cursor.execute(
+                "UPDATE hotelorder_v1 SET order_status = %s WHERE order_id = %s",
+                (new_status, order_id)
+            )
+            
+            # 记录状态变更历史
+            self.cursor.execute(
+                """INSERT INTO order_history 
+                   (order_id, previous_status, new_status, changed_by, remark) 
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (order_id, previous_status, new_status, staff_id, remark)
+            )
+            
+            self.db.commit()
+            return True
+            
+        except Exception as e:
+            self.db.rollback()
+            print(f"更新订单状态错误: {e}")
+            return False
+    
+    def update_payment_status(self, order_id, new_status, staff_id, remark=None):
+        """
+        更新支付状态，并根据支付状态自动更新订单状态
+        
+        参数:
+            order_id: 订单ID
+            new_status: 新支付状态 ('pending', 'paid', 'failed')
+            staff_id: 操作员工ID
+            remark: 备注信息
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            # 获取当前支付状态
+            self.cursor.execute("SELECT pay_status, order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
+            result = self.cursor.fetchone()
+            if not result:
+                return False
+                
+            previous_pay_status = result['pay_status']
+            current_order_status = result['order_status']
+            
+            # 如果支付状态没有变化，直接返回成功
+            if previous_pay_status == new_status:
+                return True
+                
+            # 更新支付状态
+            self.cursor.execute(
+                "UPDATE hotelorder_v1 SET pay_status = %s WHERE order_id = %s",
+                (new_status, order_id)
+            )
+            
+            # 根据支付状态自动更新订单状态
+            new_order_status = current_order_status
+            if new_status == 'paid' and current_order_status == 'pending':
+                new_order_status = 'paid'
+                self.cursor.execute(
+                    "UPDATE hotelorder_v1 SET order_status = %s WHERE order_id = %s",
+                    (new_order_status, order_id)
+                )
+                
+                # 记录订单状态变更历史
+                self.cursor.execute(
+                    """INSERT INTO order_history 
+                       (order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (order_id, current_order_status, new_order_status, staff_id, "支付完成，自动更新订单状态")
+                )
+            
+            self.db.commit()
+            return True
+            
+        except Exception as e:
+            self.db.rollback()
+            print(f"更新支付状态错误: {e}")
+            return False
+    
+    def cancel_order(self, order_id, staff_id, remark):
+        """
+        取消订单
+        
+        参数:
+            order_id: 订单ID
+            staff_id: 操作员工ID
+            remark: 取消原因
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            # 获取当前订单状态
+            self.cursor.execute("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
+            result = self.cursor.fetchone()
+            if not result:
+                return False
+                
+            previous_status = result['order_status']
+            pay_status = result['pay_status']
+            
+            # 如果订单已完成，不允许取消
+            if previous_status == 'completed':
+                return False
+                
+            # 更新订单状态为取消
+            self.cursor.execute(
+                "UPDATE hotelorder_v1 SET order_status = 'cancelled' WHERE order_id = %s",
+                (order_id,)
+            )
+            
+            # 记录状态变更历史
+            self.cursor.execute(
+                """INSERT INTO order_history 
+                   (order_id, previous_status, new_status, changed_by, remark) 
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (order_id, previous_status, 'cancelled', staff_id, remark)
+            )
+            
+            self.db.commit()
+            return True
+            
+        except Exception as e:
+            self.db.rollback()
+            print(f"取消订单错误: {e}")
+            return False
+    
+    def complete_order(self, order_id, staff_id, remark=None):
+        """
+        完成订单
+        
+        参数:
+            order_id: 订单ID
+            staff_id: 操作员工ID
+            remark: 备注信息
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            # 获取当前订单状态和支付状态
+            self.cursor.execute("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
+            result = self.cursor.fetchone()
+            if not result:
+                return False
+                
+            previous_status = result['order_status']
+            pay_status = result['pay_status']
+            
+            # 如果订单未支付，不允许完成
+            if pay_status != 'paid':
+                return False
+                
+            # 更新订单状态为完成
+            self.cursor.execute(
+                "UPDATE hotelorder_v1 SET order_status = 'completed' WHERE order_id = %s",
+                (order_id,)
+            )
+            
+            # 记录状态变更历史
+            self.cursor.execute(
+                """INSERT INTO order_history 
+                   (order_id, previous_status, new_status, changed_by, remark) 
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (order_id, previous_status, 'completed', staff_id, remark)
+            )
+            
+            self.db.commit()
+            return True
+            
+        except Exception as e:
+            self.db.rollback()
+            print(f"完成订单错误: {e}")
+            return False
+    
+    def get_order_history(self, order_id):
+        """
+        获取订单状态变更历史
+        
+        参数:
+            order_id: 订单ID
+        
+        返回:
+            list: 订单状态变更历史记录列表
+        """
+        try:
+            self.cursor.execute(
+                """SELECT * FROM order_history 
+                   WHERE order_id = %s 
+                   ORDER BY change_time DESC""",
+                (order_id,)
+            )
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f"获取订单历史错误: {e}")
+            return []
+
+# ... 现有代码 ...
+
+# ... 现有代码 ...
+
+class OrderService:
+    """
+    订单服务类
+    负责处理订单支付、完成、取消等操作
+    """
+    def __init__(self, db=None):
+        if db is None:
+            self.db = pymysql.connect(host=localConfig['host'],
+                                     port=localConfig['port'],
+                                     user=localConfig['user'],
+                                     passwd=localConfig['passwd'],
+                                     db=localConfig['db'],
+                                     charset=localConfig['charset'],
+                                     cursorclass=pymysql.cursors.DictCursor)
+        else:
+            self.db = db
+        self.cursor = self.db.cursor()
+        self.staff = get_staff()
+    
+    def processPayment(self, order_id, pay_method, amount, remark=None):
+        """
+        处理订单支付
+        
+        参数:
+            order_id: 订单ID
+            pay_method: 支付方式 (WeChat, Alipay, Credit Card, Cash, Bank Transfer)
+            amount: 支付金额
+            remark: 备注信息
+        
+        返回:
+            bool: 支付是否成功
+        """
+        try:
+            # 查询订单信息
+            self.cursor.execute("SELECT money, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
+            order_data = self.cursor.fetchone()
+            
+            if not order_data:
+                QMessageBox().information(None, "提示", "订单不存在！", QMessageBox.Yes)
+                return False
+            
+            # 检查支付金额
+            order_amount = float(order_data['money'])
+            payment_amount = float(amount)
+            if payment_amount < order_amount:
+                QMessageBox().information(None, "提示", "支付金额不足！", QMessageBox.Yes)
+                return False
+            elif payment_amount > order_amount:
+                # 计算找零金额
+                change = payment_amount - order_amount
+                QMessageBox().information(None, "提示", f"需要找零: ¥{change:.2f}", QMessageBox.Yes)
+                # 实际存储到数据库的金额应该是订单金额(已减去找零)
+                amount = order_amount
+            
+            # 如果订单已支付，提示用户
+            if order_data['pay_status'] == 'paid':
+                QMessageBox().information(None, "提示", "该订单已支付！", QMessageBox.Yes)
+                return True
+            
+            # 创建支付记录
+            transaction_id = f"{pay_method}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+            # 检查支付方式是否在允许的范围内
+            allowed_methods = ['WeChat', 'Alipay', 'Credit Card', 'Cash', 'Bank Transfer']
+            if pay_method not in allowed_methods:
+                raise ValueError(f"不支持的支付方式。支持的支付方式包括: {', '.join(allowed_methods)}")
+                
+            self.cursor.execute("""
+                INSERT INTO payment (order_id, pay_amount, pay_method, payment_status, transaction_id, pay_time, remark)
+                VALUES (%s, %s, %s, 'paid', %s, %s, %s)
+            """, (order_id, amount, pay_method, transaction_id, datetime.datetime.now(), remark))
+            
+            # 更新订单支付状态
+            order_manager = OrderStatusManager(self.db)
+            result = order_manager.update_payment_status(order_id, 'paid', self.staff.sid, f"通过{pay_method}支付")
+            
+            if result:
+                QMessageBox().information(None, "提示", "支付成功！", QMessageBox.Yes)
+                return True
+            else:
+                self.db.rollback()
+                QMessageBox().information(None, "提示", "支付处理失败，请重试！", QMessageBox.Yes)
+                return False
+                
+        except Exception as e:
+            self.db.rollback()
+            print(f"支付处理错误: {e}")
+            QMessageBox().information(None, "提示", "支付处理出错，请联系管理员！", QMessageBox.Yes)
+            return False
+    
+    def completeOrder(self, order_id, remark=None):
+        """
+        完成订单
+        
+        参数:
+            order_id: 订单ID
+            remark: 备注信息
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            order_manager = OrderStatusManager(self.db)
+            result = order_manager.complete_order(order_id, self.staff.sid, remark)
+            
+            if result:
+                QMessageBox().information(None, "提示", "订单已完成！", QMessageBox.Yes)
+                return True
+            else:
+                QMessageBox().information(None, "提示", "订单完成失败，请确保订单已支付！", QMessageBox.Yes)
+                return False
+                
+        except Exception as e:
+            print(f"完成订单错误: {e}")
+            QMessageBox().information(None, "提示", "操作出错，请联系管理员！", QMessageBox.Yes)
+            return False
+    
+    def cancelOrder(self, order_id, reason):
+        """
+        取消订单
+        
+        参数:
+            order_id: 订单ID
+            reason: 取消原因
+        
+        返回:
+            bool: 操作是否成功
+        """
+        try:
+            order_manager = OrderStatusManager(self.db)
+            result = order_manager.cancel_order(order_id, self.staff.sid, reason)
+            
+            if result:
+                QMessageBox().information(None, "提示", "订单已取消！", QMessageBox.Yes)
+                return True
+            else:
+                QMessageBox().information(None, "提示", "订单取消失败，已完成的订单不能取消！", QMessageBox.Yes)
+                return False
+                
+        except Exception as e:
+            print(f"取消订单错误: {e}")
+            QMessageBox().information(None, "提示", "操作出错，请联系管理员！", QMessageBox.Yes)
+            return False
+    
+    def getOrderHistory(self, order_id):
+        """
+        获取订单状态变更历史
+        
+        参数:
+            order_id: 订单ID
+        
+        返回:
+            list: 订单状态变更历史记录列表
+        """
+        try:
+            order_manager = OrderStatusManager(self.db)
+            return order_manager.get_order_history(order_id)
+        except Exception as e:
+            print(f"获取订单历史错误: {e}")
+            return []
+    
+    def getOrderDetails(self, order_id):
+        """
+        获取订单详细信息
+        
+        参数:
+            order_id: 订单ID
+            
+        返回:
+            dict: 订单详细信息
+        """
+        try:
+            self.cursor.execute("""
+                SELECT o.*, p.pay_amount, p.pay_method, p.payment_status, p.transaction_id, p.pay_time 
+                FROM hotelorder_v1 o
+                LEFT JOIN payment p ON o.order_id = p.order_id
+                WHERE o.order_id = %s
+            """, (order_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"获取订单详情错误: {e}")
+            return None
+    
+    def getOrdersByCustomer(self, customer_id, is_team=False):
+        """
+        获取客户的所有订单
+        
+        参数:
+            customer_id: 客户ID
+            is_team: 是否为团队客户
+            
+        返回:
+            list: 订单列表
+        """
+        try:
+            order_type = '团队' if is_team else '个人'
+            self.cursor.execute("""
+                SELECT * FROM hotelorder_v1
+                WHERE id = %s AND ordertype = %s
+                ORDER BY order_id DESC
+            """, (customer_id, order_type))
+            return self.cursor.fetchall()
+        except Exception as e:
+            print(f"获取客户订单错误: {e}")
+            return []
+
+# ... 现有代码 ...
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
