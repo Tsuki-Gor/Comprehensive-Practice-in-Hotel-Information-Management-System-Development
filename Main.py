@@ -4,27 +4,18 @@ import sys
 from PyQt5.QtWidgets import QApplication,QMainWindow,QMessageBox
 # 导入 pymysql 模块，用于与 MySQL 数据库进行交互
 import pymysql
+# 导入 cx_Oracle 模块，用于与 Oracle 数据库进行交互
+try:
+    import cx_Oracle
+except ImportError:
+    print("警告: cx_Oracle 模块未安装，Oracle数据库功能将不可用")
+    print("请使用命令安装: pip install cx_Oracle")
 # 从 PyQt5.Qt 模块导入所有内容，通常包含了 PyQt5 的核心功能
 from PyQt5.Qt import *
 # 从 PyQt5.QtCore 模块导入 Qt 类，用于访问 Qt 框架的核心常量和枚举
 from PyQt5.QtCore import Qt
 # 定义数据库配置字典 localConfig，包含数据库连接所需的各项参数
 from decimal import Decimal
-localConfig = {
-    'host': 'localhost',
-    # 数据库主机地址
-    'port': 3306,
-    # 数据库端口号
-    'user': 'root',
-    # 数据库用户名
-    'passwd': 'Tsuki',
-    # 数据库密码
-    'db': 'dbdesign',
-    # 要连接的数据库名称
-    'charset': 'utf8',
-    # 字符编码
-    'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针，使用字典形式返回查询结果
-}#数据库配置连接
 # 导入 xlwt 模块，用于创建和写入 Excel 文件
 import xlwt
 # 导入 matplotlib 库，用于绘制图表
@@ -66,6 +57,8 @@ from collections import defaultdict
 
 import re
 
+import service.config
+
 
 localConfig = {
     'host': 'localhost',
@@ -76,6 +69,8 @@ localConfig = {
     'charset': 'utf8',
     'cursorclass' : pymysql.cursors.DictCursor    # 数据库操纵指针
 }#数据库配置连接
+
+localConfig=service.config.get_config()
 def _initStaff():
     """
     初始化员工对象，创建一个全局的 Staff 类实例。
@@ -96,26 +91,396 @@ def get_staff():#员工账户
 
 
 class Database:
-    """数据库操作类"""
+    """数据库操作类，支持MySQL和Oracle"""
     def __init__(self):
-        self.conn = pymysql.connect(**localConfig)
-        self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+        self.db_type = service.config.DB_TYPE.upper()
+        if self.db_type == "MYSQL":
+            self.conn = pymysql.connect(**localConfig)
+            self.cursor = self.conn.cursor(pymysql.cursors.DictCursor)
+        elif self.db_type == "ORACLE":
+            try:
+                # Oracle连接参数处理
+                dsn = cx_Oracle.makedsn(
+                    localConfig['host'],
+                    localConfig['port'],
+                    service_name=localConfig['service_name']
+                )
+                self.conn = cx_Oracle.connect(
+                    user=localConfig['user'],
+                    password=localConfig['passwd'],
+                    dsn=dsn
+                )
+                # 创建游标
+                self.cursor = self.conn.cursor()
+                # 设置日期格式
+                self.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+                # 设置自动提交
+                self.conn.autocommit = False
+            except Exception as e:
+                print(f"Oracle数据库连接错误: {e}")
+                raise
+        else:
+            raise ValueError(f"不支持的数据库类型: {self.db_type}")
 
     def query(self, sql, params=None):
         """执行查询 SQL"""
-        self.cursor.execute(sql, params or ())
-        return self.cursor.fetchall()
+        params = params or ()
+        
+        try:
+            # 处理Oracle和MySQL的SQL语法差异
+            if self.db_type == "ORACLE":
+                # 为表名添加HR.前缀
+                sql = re.sub(r'\b(FROM|JOIN|UPDATE|INTO|DELETE FROM)\s+(?!HR\.)([a-zA-Z_][a-zA-Z0-9_]*)', r'\1 HR.\2', sql, flags=re.IGNORECASE)
+                # 处理Oracle特有的SQL语法
+                # 替换LIMIT子句
+                limit_match = re.search(r'LIMIT\s+(\d+)(\s*,\s*(\d+))?', sql, re.IGNORECASE)
+                if limit_match:
+                    if limit_match.group(3):  # LIMIT offset, count
+                        offset = int(limit_match.group(1))
+                        count = int(limit_match.group(3))
+                        # 替换为Oracle的ROWNUM语法
+                        rownum_clause = f"ROWNUM BETWEEN {offset+1} AND {offset+count}"
+                        sql = re.sub(r'LIMIT\s+\d+\s*,\s*\d+', rownum_clause, sql, flags=re.IGNORECASE)
+                    else:  # LIMIT count
+                        count = int(limit_match.group(1))
+                        # 替换为Oracle的ROWNUM语法
+                        rownum_clause = f"ROWNUM <= {count}"
+                        sql = re.sub(r'LIMIT\s+\d+', rownum_clause, sql, flags=re.IGNORECASE)
+                
+                # 将MySQL的占位符 %s 转换为Oracle的占位符 :n
+                param_dict = None
+                if params:
+                    # 计算需要替换的占位符数量
+                    param_count = sql.count('%s')
+                    # 创建Oracle风格的占位符
+                    for i in range(1, param_count + 1):
+                        sql = sql.replace('%s', f':{i}', 1)
+                    
+                    # 将参数列表转换为字典形式
+                    param_dict = {str(i+1): params[i] for i in range(len(params))}
+                    
+                    # 处理日期类型参数
+                    for key, value in param_dict.items():
+                        if isinstance(value, datetime.datetime):
+                            param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # 添加调试信息
+                    print(f"执行Oracle查询: {sql}")
+                    print(f"参数: {param_dict}")
+                    
+                    self.cursor.execute(sql, param_dict)
+                else:
+                    print(f"执行Oracle查询(无参数): {sql}")
+                    self.cursor.execute(sql)
+            else:  # MySQL
+                self.cursor.execute(sql, params)
+            
+            # 获取结果
+            if self.db_type == "ORACLE":
+                # 获取列名
+                columns = [col[0].lower() for col in self.cursor.description] if self.cursor.description else []
+                # 将结果转换为字典列表，模拟MySQL的DictCursor
+                result = []
+                
+                # 检查是否有结果集
+                if not self.cursor.description:
+                    print("警告: 查询没有返回结果集描述信息")
+                    return []
+                    
+                # 添加调试信息
+                print(f"Oracle查询执行: {sql}")
+                print(f"参数: {params}")
+                
+                try:
+                    # 获取所有行前先检查游标状态
+                    if hasattr(self.cursor, 'rowcount') and self.cursor.rowcount > 0:
+                        print(f"游标显示有 {self.cursor.rowcount} 行数据")
+                    
+                    # 获取所有行 - 这是问题所在的第176行
+                    # 在Oracle中，fetchall()可能返回空列表，即使数据库中有数据
+                    # 这可能是由于游标状态或查询执行方式的问题
+                    rows = self.cursor.fetchall()
+                    print(f"查询结果行数: {len(rows) if rows else 0}")
+                    
+                    # 如果没有获取到数据但预期应该有数据，尝试其他方法
+                    if not rows and self.cursor.description:
+                        print("警告: fetchall()返回空结果，尝试逐行获取")
+                        # 重置游标并重新执行查询
+                        self.cursor.execute(sql, param_dict if params else None)
+                        # 逐行获取结果
+                        row = self.cursor.fetchone()
+                        temp_rows = []
+                        while row:
+                            temp_rows.append(row)
+                            row = self.cursor.fetchone()
+                        rows = temp_rows
+                        print(f"逐行获取结果行数: {len(rows)}")
+                except Exception as fetch_error:
+                    print(f"获取结果错误: {fetch_error}")
+                    # 尝试重新执行查询
+                    try:
+                        self.cursor.execute(sql, param_dict if params else None)
+                        rows = self.cursor.fetchall()
+                        print(f"重新查询结果行数: {len(rows) if rows else 0}")
+                    except Exception as retry_error:
+                        print(f"重新查询错误: {retry_error}")
+                        return []
+                
+                # 如果没有结果，直接返回空列表
+                if not rows:
+                    return []
+                    
+                for row in rows:
+                    # 处理Oracle特殊类型转换
+                    processed_row = {}
+                    for i in range(len(columns)):
+                        value = row[i]
+                        # 处理Oracle的日期类型转换为Python datetime
+                        if hasattr(value, 'isoformat'):
+                            processed_row[columns[i]] = value
+                        # 处理Oracle的CLOB类型
+                        elif hasattr(value, 'read'):
+                            try:
+                                processed_row[columns[i]] = value.read()
+                            except Exception as e:
+                                print(f"读取CLOB错误: {e}")
+                                processed_row[columns[i]] = str(value)
+                        # 处理Oracle的NUMBER类型
+                        elif isinstance(value, (int, float, Decimal)):
+                            processed_row[columns[i]] = value
+                        # 处理Oracle的BLOB类型
+                        elif isinstance(value, cx_Oracle.LOB) and not hasattr(value, 'read'):
+                            try:
+                                processed_row[columns[i]] = value.read()
+                            except Exception as e:
+                                print(f"读取BLOB错误: {e}")
+                                processed_row[columns[i]] = None
+                        # 处理None值
+                        elif value is None:
+                            processed_row[columns[i]] = None
+                        else:
+                            processed_row[columns[i]] = value
+                    result.append(processed_row)
+                
+                print(f"处理后结果数: {len(result)}")
+                return result
+            else:  # MySQL
+                return self.cursor.fetchall()
+        except Exception as e:
+            print(f"查询执行错误: {e}")
+            print(f"SQL: {sql}")
+            print(f"参数: {params}")
+            raise
 
     def execute(self, sql, params=None):
         """执行 INSERT、UPDATE、DELETE"""
-        self.cursor.execute(sql, params or ())
-        self.conn.commit()
-        return self.cursor.lastrowid
+        params = params or ()
+        last_id = None
+        
+        try:
+            if self.db_type == "ORACLE":
+                # 处理Oracle的序列和返回值
+                if sql.strip().upper().startswith("INSERT"):
+                    # 提取表名，用于获取序列
+                    table_match = re.search(r"INSERT\s+INTO\s+([^\s(]+)", sql, re.IGNORECASE)
+                    if table_match:
+                        table_name = table_match.group(1)
+                        # 移除可能的模式名前缀
+                        if '.' in table_name:
+                            table_name = table_name.split('.')[-1]
+                        
+                        # 尝试从SQL中提取主键列名
+                        id_column = "ID"  # 默认主键列名
+                        column_match = re.search(r"INSERT\s+INTO\s+[^\s(]+\s*\(([^)]+)\)", sql, re.IGNORECASE)
+                        if column_match:
+                            columns = [col.strip() for col in column_match.group(1).split(',')]
+                            # 假设第一列是主键
+                            if columns and columns[0].upper().endswith('ID'):
+                                id_column = columns[0].strip()
+                        
+                        # 检查是否需要使用序列
+                        # 如果SQL中包含VALUES子句，并且第一个值是%s，则可能需要使用序列
+                        values_match = re.search(r"VALUES\s*\(([^)]+)\)", sql, re.IGNORECASE)
+                        if values_match:
+                            values = [val.strip() for val in values_match.group(1).split(',')]
+                            if values and values[0] == '%s' and len(params) > 0 and params[0] is None:
+                                # 假设每个表有对应的序列: 表名_SEQ
+                                seq_name = f"{table_name}_SEQ"
+                                try:
+                                    # 获取序列的下一个值
+                                    self.cursor.execute(f"SELECT {seq_name}.NEXTVAL FROM DUAL")
+                                    seq_value = self.cursor.fetchone()[0]
+                                    # 替换第一个参数为序列值
+                                    params_list = list(params)
+                                    params_list[0] = seq_value
+                                    params = tuple(params_list)
+                                except Exception as seq_error:
+                                    print(f"序列获取错误: {seq_error}，尝试使用RETURNING子句")
+                        
+                        # 修改SQL以返回生成的ID
+                        returning_sql = sql + f" RETURNING {id_column} INTO :new_id"
+                        
+                        # 准备接收返回值的变量
+                        new_id_var = self.cursor.var(cx_Oracle.NUMBER)
+                        
+                        # 处理参数绑定
+                        if params:
+                            param_count = sql.count('%s')
+                            for i in range(1, param_count + 1):
+                                returning_sql = returning_sql.replace('%s', f':{i}', 1)
+                            
+                            param_dict = {str(i+1): params[i] for i in range(len(params))}
+                            # 处理日期类型参数
+                            for key, value in param_dict.items():
+                                if isinstance(value, datetime.datetime):
+                                    param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                            
+                            param_dict['new_id'] = new_id_var
+                            
+                            try:
+                                self.cursor.execute(returning_sql, param_dict)
+                                # 获取生成的ID
+                                last_id = new_id_var.getvalue()
+                            except Exception as returning_error:
+                                print(f"RETURNING子句执行错误: {returning_error}，尝试普通执行")
+                                # 如果RETURNING子句失败，回退到普通执行
+                                sql_normal = sql
+                                for i in range(1, param_count + 1):
+                                    sql_normal = sql_normal.replace('%s', f':{i}', 1)
+                                self.cursor.execute(sql_normal, param_dict)
+                        else:
+                            try:
+                                param_dict = {'new_id': new_id_var}
+                                self.cursor.execute(returning_sql, param_dict)
+                                # 获取生成的ID
+                                last_id = new_id_var.getvalue()
+                            except Exception as returning_error:
+                                print(f"RETURNING子句执行错误: {returning_error}，尝试普通执行")
+                                # 如果RETURNING子句失败，回退到普通执行
+                                self.cursor.execute(sql)
+                    else:
+                        # 如果无法提取表名，则正常执行
+                        if params:
+                            param_count = sql.count('%s')
+                            for i in range(1, param_count + 1):
+                                sql = sql.replace('%s', f':{i}', 1)
+                            
+                            param_dict = {str(i+1): params[i] for i in range(len(params))}
+                            # 处理日期类型参数
+                            for key, value in param_dict.items():
+                                if isinstance(value, datetime.datetime):
+                                    param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                            
+                            self.cursor.execute(sql, param_dict)
+                        else:
+                            self.cursor.execute(sql)
+                else:  # UPDATE, DELETE等
+                    if params:
+                        param_count = sql.count('%s')
+                        for i in range(1, param_count + 1):
+                            sql = sql.replace('%s', f':{i}', 1)
+                        
+                        param_dict = {str(i+1): params[i] for i in range(len(params))}
+                        # 处理日期类型参数
+                        for key, value in param_dict.items():
+                            if isinstance(value, datetime.datetime):
+                                param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                        
+                        self.cursor.execute(sql, param_dict)
+                    else:
+                        self.cursor.execute(sql)
+            else:  # MySQL
+                self.cursor.execute(sql, params)
+                last_id = self.cursor.lastrowid
+            
+            self.conn.commit()
+            return last_id
+        except Exception as e:
+            self.conn.rollback()
+            print(f"执行SQL错误: {e}")
+            print(f"SQL: {sql}")
+            print(f"参数: {params}")
+            raise
 
     def close(self):
         """关闭数据库连接"""
-        self.cursor.close()
-        self.conn.close()
+        try:
+            if self.cursor:
+                self.cursor.close()
+            if self.conn:
+                self.conn.close()
+        except Exception as e:
+            print(f"关闭数据库连接错误: {e}")
+            
+    def __enter__(self):
+        """支持with语句的上下文管理"""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """支持with语句的上下文管理，确保连接关闭"""
+        self.close()
+        
+    def fetchone(self):
+        """获取单条记录，兼容两种数据库"""
+        if self.db_type == "ORACLE":
+            row = self.cursor.fetchone()
+            if row:
+                # 获取列名
+                columns = [col[0].lower() for col in self.cursor.description]
+                # 处理Oracle特殊类型转换
+                processed_row = {}
+                for i in range(len(columns)):
+                    value = row[i]
+                    # 处理Oracle的日期类型转换为Python datetime
+                    if hasattr(value, 'isoformat'):
+                        processed_row[columns[i]] = value
+                    # 处理Oracle的CLOB类型
+                    elif hasattr(value, 'read'):
+                        processed_row[columns[i]] = value.read()
+                    # 处理Oracle的NUMBER类型
+                    elif isinstance(value, (int, float, Decimal)):
+                        processed_row[columns[i]] = value
+                    # 处理Oracle的BLOB类型
+                    elif isinstance(value, cx_Oracle.LOB) and not hasattr(value, 'read'):
+                        processed_row[columns[i]] = value.read()
+                    # 处理None值
+                    elif value is None:
+                        processed_row[columns[i]] = None
+                    else:
+                        processed_row[columns[i]] = value
+                return processed_row
+            return None
+        else:  # MySQL
+            return self.cursor.fetchone()
+            
+    def adapt_sql_for_oracle(self, sql):
+        """将MySQL风格的SQL适配为Oracle风格"""
+        if self.db_type != "ORACLE":
+            return sql
+            
+        # 替换MySQL特有的函数
+        sql = sql.replace('NOW()', 'SYSDATE')
+        sql = sql.replace('CURDATE()', 'TRUNC(SYSDATE)')
+        
+        # 替换自增ID语法
+        sql = re.sub(r'AUTO_INCREMENT', '', sql, flags=re.IGNORECASE)
+        
+        # 替换LIMIT子句
+        limit_match = re.search(r'LIMIT\s+(\d+)(\s*,\s*(\d+))?', sql, re.IGNORECASE)
+        if limit_match:
+            if limit_match.group(3):  # LIMIT offset, count
+                offset = int(limit_match.group(1))
+                count = int(limit_match.group(3))
+                # 替换为Oracle的ROWNUM语法
+                rownum_clause = f"ROWNUM BETWEEN {offset+1} AND {offset+count}"
+                sql = re.sub(r'LIMIT\s+\d+\s*,\s*\d+', rownum_clause, sql, flags=re.IGNORECASE)
+            else:  # LIMIT count
+                count = int(limit_match.group(1))
+                # 替换为Oracle的ROWNUM语法
+                rownum_clause = f"ROWNUM <= {count}"
+                sql = re.sub(r'LIMIT\s+\d+', rownum_clause, sql, flags=re.IGNORECASE)
+        
+        return sql
 
 class InvoiceManager:
     """发票管理类"""
@@ -355,14 +720,25 @@ class Staff:
     员工操作类
     """
     def __init__(self, config=localConfig):
-        #连接数据库
-        self.db = pymysql.connect(host=config['host'],port=config['port'],user=config['user'],
-                                      passwd=config['passwd'],db=config['db'],charset=config['charset'],
-                                      cursorclass=config['cursorclass'])
-        self.cursor = self.db.cursor()
-        self.cursor.execute("SELECT VERSION()")
-        data = self.cursor.fetchone()
-        print("Database version : %s " % data['VERSION()'])
+        # 使用Database类连接数据库，自动适配MySQL和Oracle
+        self.db_type = service.config.DB_TYPE.upper()
+        self.database = Database()
+        self.cursor = self.database.cursor
+        self.conn = self.database.conn
+        
+        # 获取数据库版本信息
+        try:
+            if self.db_type == "MYSQL":
+                self.cursor.execute("SELECT VERSION()")
+                data = self.cursor.fetchone()
+                print("Database version : %s " % data['version()'])
+            elif self.db_type == "ORACLE":
+                self.cursor.execute("SELECT BANNER FROM V$VERSION WHERE BANNER LIKE 'Oracle%'")
+                data = self.cursor.fetchone()
+                print("Database version : %s " % data['banner'])
+        except Exception as e:
+            print(f"获取数据库版本信息失败: {e}")
+            
         self.username = None
         self.password = None
         self.srole = None
@@ -387,24 +763,34 @@ class Staff:
         """
 
         try:
-            self.cursor.execute("select * from staff")
-            data = self.cursor.fetchall()#获取查询结果
-            #在数据库中查找用户名与密码，如果匹配则读入相关信息
+            # 使用Database类的query方法执行查询，自动适配MySQL和Oracle
+            sql = "SELECT * FROM staff"
+            data = self.database.query(sql)
+            
+            # 在数据库中查找用户名与密码，如果匹配则读入相关信息
             for row in data:
-                if row['susername'] == username and row['spassword'] == password:
+                # Oracle返回的列名可能是大写，所以使用大小写不敏感的方式获取
+                username_col = 'susername' if 'susername' in row else 'SUSERNAME'
+                password_col = 'spassword' if 'spassword' in row else 'SPASSWORD'
+                
+                if row[username_col] == username and row[password_col] == password:
                     self.username = username
                     self.password = password
-                    self.sid = row['sid']
-                    self.sname = row['sname']
-                    self.ssex = row['ssex']
-                    self.stime = row['stime']
-                    self.srole = row['srole']
-                    self.sidcard = row['sidcard']
-                    self.sphone = row['sphone']
-                    self.image=row['image']
-                    return row['srole']
+                    
+                    # 处理不同数据库返回的列名大小写差异
+                    self.sid = row['sid'] if 'sid' in row else row['SID']
+                    self.sname = row['sname'] if 'sname' in row else row['SNAME']
+                    self.ssex = row['ssex'] if 'ssex' in row else row['SSEX']
+                    self.stime = row['stime'] if 'stime' in row else row['STIME']
+                    self.srole = row['srole'] if 'srole' in row else row['SROLE']
+                    self.sidcard = row['sidcard'] if 'sidcard' in row else row['SIDCARD']
+                    self.sphone = row['sphone'] if 'sphone' in row else row['SPHONE']
+                    self.image = row['image'] if 'image' in row else row['IMAGE']
+                    
+                    return self.srole
+            return False
         except Exception as e:
-            print(e)
+            print(f"登录错误: {e}")
             return False
 
     def modifyPasswd(self, sid, newPasswd, oldPasswd):
@@ -419,25 +805,32 @@ class Staff:
         返回：
             bool: 修改成功返回 True，失败返回 False
         """
-
-
         try:
-            self.cursor.execute("select * from staff where sid=%s ", (sid))
-            data = self.cursor.fetchall()[0]
-            if data['spassword'] == oldPasswd:
-                self.cursor.execute("update staff set spassword=%s where sid=%s ",(newPasswd, sid))
-                self.db.commit()
+            # 使用Database类的query方法执行查询，自动适配MySQL和Oracle
+            sql = "SELECT * FROM staff WHERE sid = %s"
+            data = self.database.query(sql, (sid,))
+            
+            if not data:
+                return False
+                
+            # 处理不同数据库返回的列名大小写差异
+            password_col = 'spassword' if 'spassword' in data[0] else 'SPASSWORD'
+            
+            if data[0][password_col] == oldPasswd:
+                # 使用Database类的execute方法执行更新，自动适配MySQL和Oracle
+                update_sql = "UPDATE staff SET spassword = %s WHERE sid = %s"
+                self.database.execute(update_sql, (newPasswd, sid))
                 self.password = newPasswd
-                print("ok")
+                print("密码修改成功")
                 return True
             else:
-                print("no")
+                print("旧密码不正确")
                 return False
         except Exception as e:
-            print(e)
+            print(f"修改密码错误: {e}")
             return False
 
-    def forgetPasswd(self, newPasswd,sid,sidcard):
+    def forgetPasswd(self, newPasswd, sid, sidcard):
         """
         通过员工身份证号重置密码。
 
@@ -450,18 +843,26 @@ class Staff:
             bool: 重置成功返回 True，失败返回 False
         """
         try:
-            self.cursor.execute("select * from staff where sid=%s",sid)
-            data = self.cursor.fetchall()[0]
-            print(data)
-            if data['sidcard'] == sidcard:
-                self.cursor.execute("update staff set spassword=%s where sid=%s",(newPasswd,sid))
-                self.db.commit()
+            # 使用Database类的query方法执行查询，自动适配MySQL和Oracle
+            sql = "SELECT * FROM staff WHERE sid = %s"
+            data = self.database.query(sql, (sid,))
+            
+            if not data:
+                return False
+                
+            # 处理不同数据库返回的列名大小写差异
+            sidcard_col = 'sidcard' if 'sidcard' in data[0] else 'SIDCARD'
+            
+            if data[0][sidcard_col] == sidcard:
+                # 使用Database类的execute方法执行更新，自动适配MySQL和Oracle
+                update_sql = "UPDATE staff SET spassword = %s WHERE sid = %s"
+                self.database.execute(update_sql, (newPasswd, sid))
                 self.password = newPasswd
                 return True
             else:
                 return False
         except Exception as e:
-            print(e)
+            print(f"重置密码错误: {e}")
             return False
 
     def addStaff(self,sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone):
@@ -483,8 +884,8 @@ class Staff:
             bool: 添加成功返回 True，失败返回 False
         """
         try:
-            self.cursor.execute("insert into staff values(%s,%s,%s,%s,%s,%s,%s,%s,%s)",(sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone))
-            self.db.commit()
+            sql = "insert into staff values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone))
             return True
         except Exception as e:
             print(e)
@@ -505,8 +906,8 @@ class Staff:
         """
         try:
             # like %s 支持模糊查询，可用于搜索类似 张%（张开头的员工）。
-            self.cursor.execute("select * from staff where sname like %s",(sname))
-            data = self.cursor.fetchall()
+            sql = "select * from staff where sname like %s"
+            data = self.database.query(sql, (sname,))
             return data
         except Exception as e:
             print(e)
@@ -526,9 +927,8 @@ class Staff:
         """
         try:
             # %s 是 占位符，防止 SQL 注入攻击。
-            # sid, 注意这里的逗号，因为 Python 传入单个值时必须是元组 (sid,)，否则 pymysql 会报错。
-            self.cursor.execute("delete from staff where sid=%s and sname=%s and sidcard=%s",(sid,sname,sidcard))
-            self.db.commit()
+            sql = "delete from staff where sid=%s and sname=%s and sidcard=%s"
+            self.database.execute(sql, (sid,sname,sidcard))
             return True
         except Exception as e:
             print(e)
@@ -546,8 +946,8 @@ class Staff:
             bool: 删除成功返回 True，失败返回 False
         """
         try:
-            self.cursor.execute("delete from staff where sid=%s",(sid))
-            self.db.commit()
+            sql = "delete from staff where sid=%s"
+            self.database.execute(sql, (sid,))
             return True
         except Exception as e:
             print(e)
@@ -614,25 +1014,20 @@ class Staff:
         # 这个列表存储了 staff 表的列名，用于匹配 column 参数。
         SQL_COLUMN = ['sid','sname','ssex','stime','susername','spassword','srole','sidcard','sphone']
         try:
-            self.cursor.execute("select * from staff")
-            data = self.cursor.fetchall()
-
+            # 使用Database类的query方法执行查询，自动适配MySQL和Oracle
+            sql = "select * from staff"
+            data = self.database.query(sql)
 
             # 这里有严重错误
             # rid_selected = data[row]['rid']
             # sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
             # self.cursor.execute(sql)
 
-
-
             # sid_selected =  data[row]['sid']
             sid_selected = sid
             sql = "update staff set " + SQL_COLUMN[column] + " = %s where sid = %s"
-            self.cursor.execute(sql,(value,sid_selected))
+            self.database.execute(sql, (value, sid_selected))
 
-
-
-            self.db.commit()
             return True
         except Exception as e:
             print(e)
@@ -641,13 +1036,22 @@ class Staff:
 class Room:
     """客房信息操作类"""
     def __init__(self,config=localConfig):
-        self.db = pymysql.connect(host=config['host'],port=config['port'],user=config['user'],
-                                      passwd=config['passwd'],db=config['db'],charset=config['charset'],
-                                      cursorclass=config['cursorclass'])
-        self.cursor = self.db.cursor()
-        self.cursor.execute("SELECT VERSION()")
-        data = self.cursor.fetchone()
-        print("Database version : %s " % data['VERSION()'])
+        # 使用Database类连接数据库，自动适配MySQL和Oracle
+        self.db_type = service.config.DB_TYPE.upper()
+        self.database = Database()
+        self.cursor = self.database.cursor
+        self.conn = self.database.conn
+        
+        # 获取数据库版本信息
+        if self.db_type == "MYSQL":
+            self.cursor.execute("SELECT VERSION()")
+            data = self.cursor.fetchone()
+            print("Database version : %s " % data['version()'])
+        elif self.db_type == "ORACLE":
+            self.cursor.execute("SELECT BANNER FROM V$VERSION WHERE BANNER LIKE 'Oracle%'")
+            data = self.cursor.fetchone()
+            print("Database version : %s " % data['banner'])
+            
         # 获取全局的staff对象
         self.staff = get_staff()
 
@@ -657,8 +1061,8 @@ class Room:
         返回：
             list: 查询到的房间信息列表
         """
-        self.cursor.execute("select * from room")
-        data = self.cursor.fetchall()
+        sql = "SELECT * FROM room"
+        data = self.database.query(sql)
         return data
 
     def showRoom(self,rtype,rstate,rstorey,rstarttime,rendtime,price_bottom,price_up):
@@ -680,50 +1084,49 @@ class Room:
         """
         print(rstarttime, rendtime)
         if rstate == 0:
-            self.cursor.execute("select * from room where rtype like %s and rstorey like %s and rprice between %s and %s",
-                            (rtype,rstorey,int(price_bottom),int(price_up)))
-            data1 = self.cursor.fetchall()
+            sql = "select * from room where rtype like %s and rstorey like %s and rprice between %s and %s"
+            data1 = self.database.query(sql, (rtype, rstorey, int(price_bottom), int(price_up)))
             return data1
         elif rstate == 1:
-            # 查找符合条件的房间 rid。查找 rtype、rstorey 和 rprice 符合的房间 ID。data[i]['rid'] 获取每个房间编号。
-            self.cursor.execute(
-                "select rid from room where rtype like %s and rstorey like %s and rprice between %s and %s",
-                (rtype, rstorey, int(price_bottom), int(price_up)))
-            data = self.cursor.fetchall()
+            # 查找符合条件的房间 rid。查找 rtype、rstorey 和 rprice 符合的房间 ID。
+            sql = "select rid from room where rtype like %s and rstorey like %s and rprice between %s and %s"
+            data = self.database.query(sql, (rtype, rstorey, int(price_bottom), int(price_up)))
             list_data = []
             for i in range(len(data)):
                 # 过滤掉已被入住的房间
                 crid = data[i]['rid']
-                self.cursor.execute(
-                    "select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                    "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                    , (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime,rstarttime,rendtime))
-                data1 = self.cursor.fetchall()
-                self.cursor.execute(
-                    "select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                    "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                    , (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime,rstarttime,rendtime))
-                data2 = self.cursor.fetchall()
-                self.cursor.execute(
-                    "select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                    "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                    , (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime,rstarttime,rendtime))
-                data3 = self.cursor.fetchall()
-                self.cursor.execute(
-                    "select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                    "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                    , (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime,rstarttime,rendtime))
-                data4 = self.cursor.fetchall()
+                # 检查入住客户
+                sql = ("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                       "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+                data1 = self.database.query(sql, (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime, rstarttime, rendtime))
+                
+                # 检查入住团队
+                sql = ("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                       "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+                data2 = self.database.query(sql, (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime, rstarttime, rendtime))
+                
+                # 检查预订客户
+                sql = ("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                       "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+                data3 = self.database.query(sql, (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime, rstarttime, rendtime))
+                
+                # 检查预订团队
+                sql = ("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                       "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+                data4 = self.database.query(sql, (crid, rstarttime, rstarttime, rendtime, rendtime, rstarttime, rendtime, rstarttime, rendtime))
+                
                 # 如果所有 data1, data2, data3, data4 为空，说明房间没有被占用，则添加到 list_data。
                 if data1 == () and data2 == () and data3 == () and data4 == ():
                     list_data.append(crid)
+            
             ret = []
             # 查询符合条件的房间详细信息：
             # 逐个查询 room 表，获取完整房间信息。最终返回 ret 结果。
             for i in range(len(list_data)):
                 rid_ret = list_data[i]
-                self.cursor.execute("select * from room where rid=%s",(rid_ret))
-                ret = ret + self.cursor.fetchall()
+                sql = "select * from room where rid=%s"
+                room_data = self.database.query(sql, (rid_ret,))
+                ret = ret + room_data
             return ret
 
     def addRoom(self,rid,rtype,rstorey,rprice,rdesc,rpic):
@@ -736,8 +1139,8 @@ class Room:
         增加事务回滚（rollback()）防止数据库异常后部分写入。
         """
         try:
-            self.cursor.execute("insert into room values(%s,%s,%s,%s,%s,%s)",(rid,rtype,rstorey,rprice,rdesc,rpic))
-            self.db.commit()
+            sql = "insert into room values(%s,%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (rid, rtype, rstorey, rprice, rdesc, rpic))
             return True
         except Exception as e:
             print(e)
@@ -752,8 +1155,8 @@ class Room:
         检查是否有入住或预订记录
         """
         try:
-            self.cursor.execute("delete from room where rid=%s",(rid))
-            self.db.commit()
+            sql = "delete from room where rid=%s"
+            self.database.execute(sql, (rid,))
             return True
         except Exception as e:
             print(e)
@@ -769,12 +1172,14 @@ class Room:
         # 字典方法得到要修改的列
         SQL_COLUMN = ['rid','rtype','rstorey','rprice','rdesc']
         try:
-            self.cursor.execute("select * from room")
-            data = self.cursor.fetchall()
+            # 获取所有房间数据
+            sql = "select * from room"
+            data = self.database.query(sql)
             rid_selected = data[row]['rid']
-            sql = "update room set " + SQL_COLUMN[column] + "='" + value + "'where rid='" + rid_selected +"'"
-            self.cursor.execute(sql)
-            self.db.commit()
+            
+            # 使用参数化查询，避免SQL注入
+            sql = "update room set " + SQL_COLUMN[column] + "=%s where rid=%s"
+            self.database.execute(sql, (value, rid_selected))
             return True
         except Exception as e:
             print(e)
@@ -794,42 +1199,57 @@ class Room:
         """
         # 查询预定表和入住表，判断该房间是否能租出去
         starttime = datetime.date.today()
-        self.cursor.execute("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                            ,(crid,starttime,starttime,cendtime,cendtime,starttime,cendtime,starttime,cendtime))
-        data1 = self.cursor.fetchall()
-        self.cursor.execute("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime,starttime,cendtime))
-        data2 = self.cursor.fetchall()
-        self.cursor.execute("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime,starttime,cendtime))
-        data3 = self.cursor.fetchall()
-        self.cursor.execute("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime,starttime,cendtime))
-        data4 = self.cursor.fetchall()
+        
+        # 检查入住客户冲突
+        sql = ("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data1 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查入住团队冲突
+        sql = ("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data2 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查预订客户冲突
+        sql = ("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data3 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查预订团队冲突
+        sql = ("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data4 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
         if data1 != () or data2 != () or data3 != () or data4 != ():
             QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
             return False
-        self.cursor.execute("select * from client where cid=%s",(cid))
-        data = self.cursor.fetchall()
+        
+        # 检查客户是否存在
+        sql = "select * from client where cid=%s"
+        data = self.database.query(sql, (cid,))
+        
         # 如果没有这个人，就添加这个人
         if data == ():
-            self.cursor.execute("insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) "
-                                "values(%s,%s,%s,%s,%s,%s,%s)",(cname,cid,cphone,cage,csex,self.staff.sid,0))
-        self.cursor.execute("select * from room where rid=%s",(crid))
-        data = self.cursor.fetchall()
+            # 插入新客户
+            sql = ("insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) "
+                   "values(%s,%s,%s,%s,%s,%s,%s)")
+            self.database.execute(sql, (cname, cid, cphone, cage, csex, self.staff.sid, 0))
+        
+        # 检查房间是否存在
+        sql = "select * from room where rid=%s"
+        data = self.database.query(sql, (crid,))
+        
         if data == ():
             QMessageBox().information(None, "提示", "没有对应房间号！", QMessageBox.Yes)
             return False
+        
         perPrice = data[0]['rprice']
         totalPrice = int(perPrice) * int((cendtime-starttime).days)
+        
         try:
-            self.cursor.execute("insert into checkin_client values(%s,%s,%s,%s,%s,%s,%s)",
-                                (crid,cid,starttime,cendtime,totalPrice,self.staff.sid,remark))
-            self.db.commit()
+            # 插入入住记录
+            sql = "insert into checkin_client values(%s,%s,%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (crid, cid, starttime, cendtime, totalPrice, self.staff.sid, remark))
             return True
         except Exception as e:
             print(e)
@@ -841,15 +1261,16 @@ class Room:
         tstarttime = datetime.date.today()
         for trid in re.split(',|，| ', ttrid):
             print(trid)
-            self.cursor.execute(
-                "select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                "or A.end_time>%s and A.start_time<=%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data1 = self.cursor.fetchall()
+            # 检查入住客户冲突
+            sql = ("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<=%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data1 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             print(data1)
-            self.cursor.execute("select * from checkin_team as A where (A.rid=%s) and ((A.end_time>%s and A.start_time<%s) "
-                                "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))"
-                                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
+            
+            # 检查入住团队冲突
+            sql = ("select * from checkin_team as A where (A.rid=%s) and ((A.end_time>%s and A.start_time<%s) "
+                   "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))")
+            data2 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             data2 = self.cursor.fetchall()
             print(data2)
             self.cursor.execute(
@@ -1291,15 +1712,27 @@ class Chart:
         past_7_days = [(today - datetime.timedelta(days=i)).strftime('%m-%d') for i in
                        range(6, -1, -1)]  # 生成完整的 7 天日期列表
 
-        query = """
-        SELECT DATE_FORMAT(end_time, '%%m-%%d') AS order_date, SUM(total_amount) AS revenue
-        FROM v_order_summary
-        WHERE end_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
-        GROUP BY order_date
-        ORDER BY order_date;
-        """
+        if self.db_type == "ORACLE":
+            query = """
+            SELECT TO_CHAR(end_time, 'MM-DD') AS order_date, SUM(total_amount) AS revenue
+            FROM v_order_summary
+            WHERE end_time BETWEEN %s - INTERVAL '6' DAY AND %s
+            GROUP BY TO_CHAR(end_time, 'MM-DD')
+            ORDER BY order_date
+            """
+        else:
+            query = """
+            SELECT DATE_FORMAT(end_time, '%%m-%%d') AS order_date, SUM(total_amount) AS revenue
+            FROM v_order_summary
+            WHERE end_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+            GROUP BY order_date
+            ORDER BY order_date;
+            """
         self.cursor.execute(query, (today, today))
-        data = self.cursor.fetchall()
+        if self.db_type == "ORACLE":
+            data = self.fetchall()
+        else:
+            data = self.cursor.fetchall()
 
         # 将 SQL 结果映射到 {日期: 营业额}
         revenue_dict = defaultdict(lambda: 0)  # 默认值 0
@@ -1383,16 +1816,28 @@ class Chart:
 
         # 获取总房间数
         self.cursor.execute("SELECT COUNT(*) AS total_rooms FROM room")
-        total_room_count = self.cursor.fetchone()['total_rooms']
+        if self.db_type == "ORACLE":
+            total_room_count = self.fetchone()['total_rooms']
+        else:
+            total_room_count = self.cursor.fetchone()['total_rooms']
 
         # 查询入住数据
-        query = """
-        SELECT DATE_FORMAT(start_time, '%%m-%%d') AS checkin_date, COUNT(DISTINCT rid) AS occupied_rooms
-        FROM v_order_summary
-        WHERE start_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
-        GROUP BY checkin_date
-        ORDER BY checkin_date;
-        """
+        if self.db_type == "ORACLE":
+            query = """
+            SELECT TO_CHAR(start_time, 'MM-DD') AS checkin_date, COUNT(DISTINCT rid) AS occupied_rooms
+            FROM v_order_summary
+            WHERE start_time BETWEEN %s - INTERVAL '6' DAY AND %s
+            GROUP BY TO_CHAR(start_time, 'MM-DD')
+            ORDER BY checkin_date
+            """
+        else:
+            query = """
+            SELECT DATE_FORMAT(start_time, '%%m-%%d') AS checkin_date, COUNT(DISTINCT rid) AS occupied_rooms
+            FROM v_order_summary
+            WHERE start_time BETWEEN DATE_SUB(%s, INTERVAL 6 DAY) AND %s
+            GROUP BY checkin_date
+            ORDER BY checkin_date;
+            """
         self.cursor.execute(query, (today, today))
         data = self.cursor.fetchall()
 

@@ -139,23 +139,6 @@ border:1px solid black
     </item>
     <item>
      <property name="text">
-      <string>  更新房源*</string>
-     </property>
-     <property name="font">
-      <font>
-       <family>FontAwesome</family>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../pictures/room3.png</normaloff>../../../pictures/room3.png</iconset>
-     </property>
-    </item>
-    <item>
-     <property name="text">
       <string>  办理入住</string>
      </property>
      <property name="font">
@@ -203,6 +186,23 @@ border:1px solid black
      <property name="icon">
       <iconset>
        <normaloff>../../../pictures/room5.png</normaloff>../../../pictures/room5.png</iconset>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>  更新房源*</string>
+     </property>
+     <property name="font">
+      <font>
+       <family>FontAwesome</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../pictures/room3.png</normaloff>../../../pictures/room3.png</iconset>
      </property>
     </item>
    </widget>
@@ -342,7 +342,7 @@ border-radius:5px</string>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="page">
      <widget class="QToolButton" name="toolButton_2">
@@ -3461,7 +3461,17 @@ background:#CCFF99
       </item>
       <item>
        <property name="text">
-        <string>银行卡</string>
+        <string>信用卡</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>现金</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>银行转账</string>
        </property>
       </item>
      </widget>
@@ -3717,7 +3727,7 @@ background-color:#CCFFCC</string>
        </rect>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page_14">
        <widget class="QPushButton" name="commitAddRoom">

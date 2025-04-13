@@ -1,0 +1,14 @@
+<RCC>
+  <qresource prefix="pictures">
+    <file>references/pictures/frame.png</file>
+    <file>references/pictures/anotherbg.png</file>
+    <file>references/pictures/search.png</file>
+    <file>references/pictures/bg.png</file>
+    <file>references/pictures/line.png</file>
+    <file>references/pictures/home_bg.png</file>
+    <file>references/pictures/chart.png</file>
+    <file>references/pictures/employee.png</file>
+    <file>references/pictures/room.png</file>
+    <file>references/pictures/button.png</file>
+  </qresource>
+</RCC>
