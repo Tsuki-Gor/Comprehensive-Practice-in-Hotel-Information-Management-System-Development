@@ -1,27 +1,29 @@
 import os
 
+import pymysql
+
 # MySQL 配置
 MYSQL_CONFIG = {
     "host": "localhost",
     "port": 3306,
     "user": "root",
-    "passwd": "Tsuki",
+    "passwd": "315225zhang",
     "db": "dbdesign",
     "charset": "utf8",
-    "cursorclass": "pymysql.cursors.DictCursor"
+    "cursorclass": pymysql.cursors.DictCursor
 }
 
 # Oracle 配置（未来切换时使用）
 ORACLE_CONFIG = {
     "host": "localhost",
     "port": 1521,
-    "user": "oracle_user",
-    "passwd": "oracle_password",
-    "service_name": "orclpdb1"  # Oracle 使用 service_name 而非 db
+    "user": "SYSTEM",
+    "passwd": "oracle123",
+    "service_name": "orcl"  # Oracle 使用 service_name 而非 db
 }
 
 # 选择数据库类型（未来切换 Oracle 只需修改这里）
-DB_TYPE = os.getenv("DB_TYPE", "MYSQL")  # 读取环境变量，默认使用 MySQL
+DB_TYPE = os.getenv("DB_TYPE", "ORACLE")  # 读取环境变量，默认使用 MySQL
 # 切换示例：
 # set DB_TYPE=ORACLE  # Windows CMD
 
