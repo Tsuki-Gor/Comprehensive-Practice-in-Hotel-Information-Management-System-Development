@@ -19,7 +19,8 @@ ORACLE_CONFIG = {
     "port": 1521,
     "user": "SYSTEM",
     "passwd": "oracle123",
-    "service_name": "orcl"  # Oracle 使用 service_name 而非 db
+    "service_name": "orcl",  # Oracle 使用 service_name 而非 db
+    "schema_prefix": "HR"    # 添加模式前缀，用于自动在表名前添加HR.
 }
 
 # 选择数据库类型（未来切换 Oracle 只需修改这里）
