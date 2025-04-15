@@ -129,29 +129,101 @@ class Database:
         try:
             # 处理Oracle和MySQL的SQL语法差异
             if self.db_type == "ORACLE":
-                # 为表名添加HR.前缀
-                sql = re.sub(r'\b(FROM|JOIN|UPDATE|INTO|DELETE FROM)\s+(?!HR\.)([a-zA-Z_][a-zA-Z0-9_]*)', r'\1 HR.\2', sql, flags=re.IGNORECASE)
-                # 处理Oracle特有的SQL语法
-                # 替换LIMIT子句
+                # 记录原始SQL以便调试
+                original_sql = sql
+                print(f"原始SQL: {original_sql}")
+                
+                # 检查是否需要添加模式前缀
+                schema_prefix = localConfig.get('schema_prefix', '')
+                
+                # 处理表名前缀
+                if schema_prefix:
+                    # 使用更简单可靠的正则表达式处理表名前缀
+                    # 匹配常见SQL关键字后的表名，但不替换已有前缀的表名
+                    pattern = r'\b(FROM|JOIN|UPDATE|INTO|DELETE FROM)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.HR)'
+                    replacement = r'\1 HR.\2'
+                    print(f"正则表达式模式: {pattern}")
+                    print(f"替换模式: {replacement}")
+                    
+                    # 应用正则表达式替换
+                    sql = re.sub(pattern, replacement, sql, flags=re.IGNORECASE)
+                    print(f"添加表名前缀后SQL: {sql}")
+                    
+                    # 检查特定表名是否丢失（如STAFF表）
+                    for table_name in ['STAFF', 'ROOM', 'CUSTOMER', 'HOTELORDER']:
+                        if original_sql.upper().find(f"FROM {table_name}") >= 0 and \
+                           sql.upper().find(f"FROM {table_name}") < 0 and \
+                           sql.upper().find(f"FROM {schema_prefix.upper()}.{table_name}") < 0:
+                            
+                            print(f"警告: 表名{table_name}在处理后丢失!")
+                            # 手动修复表名
+                            specific_pattern = r'\bFROM\s+' + table_name + r'\b'
+                            specific_replacement = f'FROM {schema_prefix}.{table_name}'
+                            sql = re.sub(specific_pattern, specific_replacement, original_sql, flags=re.IGNORECASE)
+                            print(f"手动修复后SQL: {sql}")
+                
+                # 处理LIMIT子句转换为Oracle的ROWNUM
                 limit_match = re.search(r'LIMIT\s+(\d+)(\s*,\s*(\d+))?', sql, re.IGNORECASE)
                 if limit_match:
-                    if limit_match.group(3):  # LIMIT offset, count
+                    # 保存LIMIT处理前的SQL
+                    pre_limit_sql = sql
+                    print(f"LIMIT处理前SQL: {pre_limit_sql}")
+                    
+                    if limit_match.group(3):  # LIMIT offset, count 格式
                         offset = int(limit_match.group(1))
                         count = int(limit_match.group(3))
-                        # 替换为Oracle的ROWNUM语法
-                        rownum_clause = f"ROWNUM BETWEEN {offset+1} AND {offset+count}"
-                        sql = re.sub(r'LIMIT\s+\d+\s*,\s*\d+', rownum_clause, sql, flags=re.IGNORECASE)
-                    else:  # LIMIT count
+                        
+                        # 提取SELECT和FROM部分
+                        select_match = re.search(r'SELECT\s+(.+?)\s+FROM', sql, re.IGNORECASE | re.DOTALL)
+                        if select_match:
+                            select_part = select_match.group(1)
+                            # 提取完整的FROM部分（包括WHERE, ORDER BY等）
+                            from_part = sql[sql.lower().find('from'):]
+                            # 移除LIMIT子句
+                            from_part = re.sub(r'LIMIT\s+\d+\s*,\s*\d+', '', from_part, flags=re.IGNORECASE)
+                            
+                            # 构建Oracle分页查询
+                            sql = f"SELECT * FROM (SELECT a.*, ROWNUM rnum FROM (SELECT {select_part} {from_part}) a WHERE ROWNUM <= {offset+count}) WHERE rnum > {offset}"
+                            print(f"LIMIT转换后SQL: {sql}")
+                        else:
+                            # 如果无法解析SELECT部分，使用简单替换
+                            rownum_clause = f"ROWNUM BETWEEN {offset+1} AND {offset+count}"
+                            sql = re.sub(r'LIMIT\s+\d+\s*,\s*\d+', rownum_clause, sql, flags=re.IGNORECASE)
+                            print(f"简单LIMIT替换后SQL: {sql}")
+                    else:  # LIMIT count 格式
                         count = int(limit_match.group(1))
-                        # 替换为Oracle的ROWNUM语法
-                        rownum_clause = f"ROWNUM <= {count}"
-                        sql = re.sub(r'LIMIT\s+\d+', rownum_clause, sql, flags=re.IGNORECASE)
+                        
+                        # 检查是否是简单查询
+                        if re.search(r'SELECT\s+.+?\s+FROM\s+[^\s\(]+', sql, re.IGNORECASE | re.DOTALL):
+                            # 简单查询直接添加ROWNUM条件
+                            sql = re.sub(r'LIMIT\s+\d+', '', sql, flags=re.IGNORECASE)
+                            if 'WHERE' in sql.upper():
+                                sql = sql + f" AND ROWNUM <= {count}"
+                            else:
+                                sql = sql + f" WHERE ROWNUM <= {count}"
+                            print(f"简单LIMIT count替换后SQL: {sql}")
+                        else:
+                            # 复杂查询使用子查询
+                            select_match = re.search(r'SELECT\s+(.+?)\s+FROM', sql, re.IGNORECASE | re.DOTALL)
+                            if select_match:
+                                select_part = select_match.group(1)
+                                from_part = sql[sql.lower().find('from'):]
+                                from_part = re.sub(r'LIMIT\s+\d+', '', from_part, flags=re.IGNORECASE)
+                                
+                                sql = f"SELECT * FROM (SELECT {select_part} {from_part}) WHERE ROWNUM <= {count}"
+                                print(f"复杂LIMIT count替换后SQL: {sql}")
+                            else:
+                                # 无法解析时使用简单替换
+                                rownum_clause = f"ROWNUM <= {count}"
+                                sql = re.sub(r'LIMIT\s+\d+', rownum_clause, sql, flags=re.IGNORECASE)
+                                print(f"无法解析的LIMIT count替换后SQL: {sql}")
                 
                 # 将MySQL的占位符 %s 转换为Oracle的占位符 :n
                 param_dict = None
                 if params:
                     # 计算需要替换的占位符数量
                     param_count = sql.count('%s')
+                    
                     # 创建Oracle风格的占位符
                     for i in range(1, param_count + 1):
                         sql = sql.replace('%s', f':{i}', 1)
@@ -164,105 +236,113 @@ class Database:
                         if isinstance(value, datetime.datetime):
                             param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
                     
-                    # 添加调试信息
-                    print(f"执行Oracle查询: {sql}")
+                    print(f"最终执行Oracle查询: {sql}")
                     print(f"参数: {param_dict}")
                     
                     self.cursor.execute(sql, param_dict)
                 else:
-                    print(f"执行Oracle查询(无参数): {sql}")
+                    print(f"最终执行Oracle查询(无参数): {sql}")
                     self.cursor.execute(sql)
+                
+                # 删除重复的代码块，因为下面已经有相同的逻辑
             else:  # MySQL
                 self.cursor.execute(sql, params)
             
             # 获取结果
             if self.db_type == "ORACLE":
                 # 获取列名
-                columns = [col[0].lower() for col in self.cursor.description] if self.cursor.description else []
-                # 将结果转换为字典列表，模拟MySQL的DictCursor
-                result = []
-                
-                # 检查是否有结果集
                 if not self.cursor.description:
                     print("警告: 查询没有返回结果集描述信息")
                     return []
-                    
-                # 添加调试信息
-                print(f"Oracle查询执行: {sql}")
-                print(f"参数: {params}")
                 
+                columns = [col[0].lower() for col in self.cursor.description]
+                print(f"Oracle查询列名: {columns}")
+                
+                # 获取查询结果
                 try:
-                    # 获取所有行前先检查游标状态
-                    if hasattr(self.cursor, 'rowcount') and self.cursor.rowcount > 0:
-                        print(f"游标显示有 {self.cursor.rowcount} 行数据")
-                    
-                    # 获取所有行 - 这是问题所在的第176行
-                    # 在Oracle中，fetchall()可能返回空列表，即使数据库中有数据
-                    # 这可能是由于游标状态或查询执行方式的问题
+                    # 首先尝试使用fetchall()
                     rows = self.cursor.fetchall()
-                    print(f"查询结果行数: {len(rows) if rows else 0}")
+                    print(f"Oracle查询结果行数: {len(rows) if rows else 0}")
                     
-                    # 如果没有获取到数据但预期应该有数据，尝试其他方法
+                    # 如果没有结果但有description，尝试逐行获取
                     if not rows and self.cursor.description:
-                        print("警告: fetchall()返回空结果，尝试逐行获取")
-                        # 重置游标并重新执行查询
-                        self.cursor.execute(sql, param_dict if params else None)
-                        # 逐行获取结果
+                        print("尝试逐行获取数据...")
+                        # 重新执行查询
+                        # 修复：Oracle执行查询时，如果没有参数，不应该传递None
+                        if params:
+                            self.cursor.execute(sql, param_dict)
+                        else:
+                            self.cursor.execute(sql)
+                        
+                        # 使用fetchone()逐行获取
+                        rows = []
                         row = self.cursor.fetchone()
-                        temp_rows = []
                         while row:
-                            temp_rows.append(row)
+                            rows.append(row)
                             row = self.cursor.fetchone()
-                        rows = temp_rows
                         print(f"逐行获取结果行数: {len(rows)}")
-                except Exception as fetch_error:
-                    print(f"获取结果错误: {fetch_error}")
-                    # 尝试重新执行查询
-                    try:
-                        self.cursor.execute(sql, param_dict if params else None)
-                        rows = self.cursor.fetchall()
-                        print(f"重新查询结果行数: {len(rows) if rows else 0}")
-                    except Exception as retry_error:
-                        print(f"重新查询错误: {retry_error}")
-                        return []
+                except Exception as e:
+                    print(f"获取结果时发生错误: {e}")
+                    import traceback
+                    print(traceback.format_exc())
+                    return []
                 
                 # 如果没有结果，直接返回空列表
                 if not rows:
                     return []
-                    
+                
+                # 将结果转换为字典列表
+                result = []
                 for row in rows:
                     # 处理Oracle特殊类型转换
                     processed_row = {}
-                    for i in range(len(columns)):
-                        value = row[i]
-                        # 处理Oracle的日期类型转换为Python datetime
-                        if hasattr(value, 'isoformat'):
-                            processed_row[columns[i]] = value
-                        # 处理Oracle的CLOB类型
-                        elif hasattr(value, 'read'):
+                    
+                    # 处理不同类型的行数据
+                    if isinstance(row, (tuple, list)):
+                        # 确保列名和值的数量匹配
+                        col_count = min(len(columns), len(row))
+                        
+                        for i in range(col_count):
                             try:
-                                processed_row[columns[i]] = value.read()
+                                value = row[i]
+                                column_name = columns[i]
+                                
+                                # 处理Oracle特殊类型
+                                if hasattr(value, 'isoformat'):  # 日期类型
+                                    processed_row[column_name] = value
+                                elif hasattr(value, 'read'):  # CLOB类型
+                                    try:
+                                        processed_row[column_name] = value.read()
+                                    except Exception as e:
+                                        print(f"读取CLOB错误: {e}")
+                                        processed_row[column_name] = str(value)
+                                elif isinstance(value, (int, float, Decimal)):  # 数值类型
+                                    processed_row[column_name] = value
+                                elif value is None:  # NULL值
+                                    processed_row[column_name] = None
+                                else:  # 其他类型
+                                    processed_row[column_name] = value
                             except Exception as e:
-                                print(f"读取CLOB错误: {e}")
-                                processed_row[columns[i]] = str(value)
-                        # 处理Oracle的NUMBER类型
-                        elif isinstance(value, (int, float, Decimal)):
-                            processed_row[columns[i]] = value
-                        # 处理Oracle的BLOB类型
-                        elif isinstance(value, cx_Oracle.LOB) and not hasattr(value, 'read'):
-                            try:
-                                processed_row[columns[i]] = value.read()
-                            except Exception as e:
-                                print(f"读取BLOB错误: {e}")
-                                processed_row[columns[i]] = None
-                        # 处理None值
-                        elif value is None:
-                            processed_row[columns[i]] = None
-                        else:
-                            processed_row[columns[i]] = value
+                                print(f"处理列 {i} ({columns[i] if i < len(columns) else '未知'}) 时出错: {e}")
+                                if i < len(columns):
+                                    processed_row[columns[i]] = None
+                    elif isinstance(row, dict):  # 已经是字典类型
+                        processed_row = row
+                    else:  # 其他类型
+                        print(f"警告: 未知的行类型: {type(row)}")
+                        # 尝试转换为字典
+                        for i, col in enumerate(columns):
+                            if i < len(row) if hasattr(row, '__len__') else False:
+                                try:
+                                    processed_row[col] = row[i] if hasattr(row, '__getitem__') else None
+                                except Exception:
+                                    processed_row[col] = None
+                            else:
+                                processed_row[col] = None
+                    
                     result.append(processed_row)
                 
-                print(f"处理后结果数: {len(result)}")
+                print(f"Oracle查询处理后结果数: {len(result)}")
                 return result
             else:  # MySQL
                 return self.cursor.fetchall()
@@ -287,7 +367,9 @@ class Database:
                         table_name = table_match.group(1)
                         # 移除可能的模式名前缀
                         if '.' in table_name:
+                            schema_prefix = table_name.split('.')[0]
                             table_name = table_name.split('.')[-1]
+                            print(f"从INSERT语句中提取表名: {table_name}，模式前缀: {schema_prefix}")
                         
                         # 尝试从SQL中提取主键列名
                         id_column = "ID"  # 默认主键列名
@@ -884,7 +966,8 @@ class Staff:
             bool: 添加成功返回 True，失败返回 False
         """
         try:
-            sql = "insert into staff values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+            # 明确指定列名，避免因表结构差异导致的列数不匹配问题
+            sql = "INSERT INTO staff (sid, sname, ssex, stime, susername, spassword, srole, sidcard, sphone) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
             self.database.execute(sql, (sid,sname,ssex,stime,susername,spassword,srole,sidcard,sphone))
             return True
         except Exception as e:
@@ -1043,14 +1126,30 @@ class Room:
         self.conn = self.database.conn
         
         # 获取数据库版本信息
-        if self.db_type == "MYSQL":
-            self.cursor.execute("SELECT VERSION()")
-            data = self.cursor.fetchone()
-            print("Database version : %s " % data['version()'])
-        elif self.db_type == "ORACLE":
-            self.cursor.execute("SELECT BANNER FROM V$VERSION WHERE BANNER LIKE 'Oracle%'")
-            data = self.cursor.fetchone()
-            print("Database version : %s " % data['banner'])
+        try:
+            if self.db_type == "MYSQL":
+                # 使用MySQL方式获取版本
+                data = self.database.query("SELECT VERSION()")
+                if data and len(data) > 0 and 'version()' in data[0]:
+                    print("Database version : %s " % data[0]['version()'])
+                else:
+                    print("无法获取MySQL数据库版本信息")
+            elif self.db_type == "ORACLE":
+                # 使用Oracle方式获取版本
+                try:
+                    # 只使用database.query方法，不直接使用cursor
+                    data = self.database.query("SELECT BANNER FROM V$VERSION WHERE BANNER LIKE 'Oracle%'")
+                    if data and len(data) > 0 and 'banner' in data[0]:
+                        print("Database version : %s " % data[0]['banner'])
+                    else:
+                        print("无法获取Oracle数据库版本信息")
+                except Exception as oracle_error:
+                    print(f"Oracle版本查询错误: {oracle_error}")
+                    # 如果查询失败，不影响后续操作
+                    print("继续使用Oracle数据库，但无法显示版本信息")
+        except Exception as e:
+            print(f"获取数据库版本信息时出错: {e}")
+            # 即使获取版本信息失败，也不影响后续操作
             
         # 获取全局的staff对象
         self.staff = get_staff()
@@ -1619,14 +1718,29 @@ class Room:
             return False
 
 class Chart:
-    def __init__(self,config=localConfig):
-        self.db = pymysql.connect(host=config['host'], port=config['port'], user=config['user'],
-                                  passwd=config['passwd'], db=config['db'], charset=config['charset'],
-                                  cursorclass=config['cursorclass'])
-        self.cursor = self.db.cursor()
-        self.cursor.execute("SELECT VERSION()")
-        data = self.cursor.fetchone()
-        print("Database version : %s " % data['VERSION()'])
+    def __init__(self, config=localConfig):
+        # 使用Database类来处理数据库连接，自动适配MySQL和Oracle
+        self.database = Database()
+        # 不再直接使用cursor和conn，而是通过database对象的方法来操作数据库
+        self.db_type = self.database.db_type
+        
+        # 获取数据库版本信息
+        try:
+            if self.db_type == "MYSQL":
+                data = self.database.query("SELECT VERSION()")
+                if data and len(data) > 0:
+                    print("Database version : %s " % data[0]['version()'])
+                else:
+                    print("无法获取MySQL数据库版本信息")
+            else:  # Oracle
+                data = self.database.query("SELECT BANNER FROM V$VERSION WHERE BANNER LIKE 'Oracle%'")
+                if data and len(data) > 0:
+                    print("Database version : %s " % data[0]['banner'])
+                else:
+                    print("无法获取Oracle数据库版本信息")
+        except Exception as e:
+            print(f"获取数据库版本信息时出错: {e}")
+            # 继续执行，不因版本查询失败而中断整个程序
 
 
     def toExcel(self,path, table_name):
@@ -1634,10 +1748,15 @@ class Chart:
         导出到excel表
         """
         sql = "select * from " + table_name
-        self.cursor.execute(sql)
+        # 使用Database类的query方法执行查询，自动处理不同数据库类型
+        all_data = self.database.query(sql)
         path = str(path)
-        fields = [field[0] for field in self.cursor.description]
-        all_data = self.cursor.fetchall()
+        
+        # 获取字段名
+        if all_data:
+            fields = list(all_data[0].keys())
+        else:
+            fields = []
         # 写入excel
         book = xlwt.Workbook()
         sheet = book.add_sheet('sheet1')
@@ -1728,11 +1847,9 @@ class Chart:
             GROUP BY order_date
             ORDER BY order_date;
             """
-        self.cursor.execute(query, (today, today))
-        if self.db_type == "ORACLE":
-            data = self.fetchall()
-        else:
-            data = self.cursor.fetchall()
+        
+        # 使用Database类的query方法执行查询，自动处理不同数据库类型
+        data = self.database.query(query, (today, today))
 
         # 将 SQL 结果映射到 {日期: 营业额}
         revenue_dict = defaultdict(lambda: 0)  # 默认值 0
@@ -1815,11 +1932,8 @@ class Chart:
         past_7_days = [(today - datetime.timedelta(days=i)).strftime('%m-%d') for i in range(6, -1, -1)]
 
         # 获取总房间数
-        self.cursor.execute("SELECT COUNT(*) AS total_rooms FROM room")
-        if self.db_type == "ORACLE":
-            total_room_count = self.fetchone()['total_rooms']
-        else:
-            total_room_count = self.cursor.fetchone()['total_rooms']
+        room_count_data = self.database.query("SELECT COUNT(*) AS total_rooms FROM room")
+        total_room_count = room_count_data[0]['total_rooms']
 
         # 查询入住数据
         if self.db_type == "ORACLE":
@@ -1838,8 +1952,8 @@ class Chart:
             GROUP BY checkin_date
             ORDER BY checkin_date;
             """
-        self.cursor.execute(query, (today, today))
-        data = self.cursor.fetchall()
+        # 使用Database类的query方法执行查询，自动处理不同数据库类型
+        data = self.database.query(query, (today, today))
 
         # 结果映射到 {日期: 入住房间数}
         occupy_dict = defaultdict(lambda: 0)  # 默认值 0
@@ -1879,9 +1993,9 @@ class Chart:
             SUM(CASE WHEN ordertype = '团队' THEN 1 ELSE 0 END) AS num_team
         FROM v_client_team_order;
         """
-        self.cursor.execute(query)
-        data = self.cursor.fetchone()
-        return [data['num_client'], data['num_team']]
+        # 使用Database类的query方法执行查询，自动处理不同数据库类型
+        data = self.database.query(query)
+        return [data[0]['num_client'], data[0]['num_team']]
 
 
     # def getStaffStatics(self):
@@ -1909,8 +2023,8 @@ class Chart:
         GROUP BY register_sid
         ORDER BY order_count DESC;
         """
-        self.cursor.execute(query)
-        data = self.cursor.fetchall()
+        # 使用Database类的query方法执行查询，自动处理不同数据库类型
+        data = self.database.query(query)
 
         list_staff_id = []
         list_order_count = []
@@ -3062,38 +3176,45 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
 
     #绘图相关
     def plotRevenue(self):
-        c = Chart()
-        x, y = c.getRevenue()
-        F = Figure_Canvas(width=6, height=2, dpi=100)
-        F.axes.plot(x, y)
+        try:
+            c = Chart()
+            x, y = c.getRevenue()
+            F = Figure_Canvas(width=6, height=2, dpi=100)
+            F.axes.plot(x, y)
 
-        F.fig.suptitle("revenue in 7 days")
-        F.axes.plot(x, y, marker='o')  # 添加点标记，确保即使某天营业额为 0 也能清晰显示
-        F.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
-        # F.axes.set_xticklabels(x, rotation=45)  # 旋转 x 轴标签，避免重叠
-        F.axes.set_ylabel("Revenue")  # y 轴添加单位
+            F.fig.suptitle("revenue in 7 days")
+            F.axes.plot(x, y, marker='o')  # 添加点标记，确保即使某天营业额为 0 也能清晰显示
+            F.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
+            # F.axes.set_xticklabels(x, rotation=45)  # 旋转 x 轴标签，避免重叠
+            F.axes.set_ylabel("Revenue")  # y 轴添加单位
 
-        # 设置 y 轴范围
-        # F.axes.set_ylim(0, 1)  # 强制 y 轴范围为 [0, 1]
-        # F.axes.set_ylim(bottom=0)  # 确保 y 轴起点为 0
+            # 设置 y 轴范围
+            # F.axes.set_ylim(0, 1)  # 强制 y 轴范围为 [0, 1]
+            # F.axes.set_ylim(bottom=0)  # 确保 y 轴起点为 0
 
-
-        self.gridlayout.addWidget(F, 1, 0)
+            self.gridlayout.addWidget(F, 1, 0)
+        except Exception as e:
+            print(f"绘制营业额图表时出错: {e}")
+            QMessageBox.warning(self, "警告", f"绘制营业额图表时出错: {e}", QMessageBox.Ok)
 
     def plotOccupy(self):
-        F1 = Figure_Canvas(width=6, height=2, dpi=100)
-        F1.fig.suptitle("occupancy rate in 7 days")
-        c = Chart()
-        x, y = c.getOccupy()
+        try:
+            F1 = Figure_Canvas(width=6, height=2, dpi=100)
+            F1.fig.suptitle("occupancy rate in 7 days")
+            c = Chart()
+            x, y = c.getOccupy()
 
-        F1.axes.plot(x, y, marker='o')  # 画点，防止数据缺失时线段断裂
-        F1.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
-        F1.axes.set_ylabel("Occupancy Rate (%)")  # y 轴添加单位
+            F1.axes.plot(x, y, marker='o')  # 画点，防止数据缺失时线段断裂
+            F1.axes.set_xticks(range(len(x)))  # 设置 x 轴刻度
+            F1.axes.set_ylabel("Occupancy Rate (%)")  # y 轴添加单位
 
-        F1.axes.set_ylim(0, 1)  # 确保 y 轴在 0 到 1 之间（百分比）
+            F1.axes.set_ylim(0, 1)  # 确保 y 轴在 0 到 1 之间（百分比）
 
-        F1.axes.plot(x, y)
-        self.gridlayout.addWidget(F1, 2, 0)
+            F1.axes.plot(x, y)
+            self.gridlayout.addWidget(F1, 2, 0)
+        except Exception as e:
+            print(f"绘制入住率图表时出错: {e}")
+            QMessageBox.warning(self, "警告", f"绘制入住率图表时出错: {e}", QMessageBox.Ok)
 
 
     def figureCS(self):
@@ -3102,22 +3223,30 @@ class ChartOp(QMainWindow, Ui_ReportWindow):
 
 
     def plotStaff(self):
-        F1 = Figure_Canvas(width=6, height=2, dpi=100)
-        F1.fig.suptitle("components of client")
-        c = Chart()
-        component = c.getClientStatics()
-        content = ['individual', 'team']
-        cols = ['r','m']
-        F1.axes.pie(component,labels=content,startangle=90,shadow=True,explode=(0,0.1),colors=cols,autopct='%1.1f%%')
-        self.gridlayout2.addWidget(F1, 1, 0)
+        try:
+            F1 = Figure_Canvas(width=6, height=2, dpi=100)
+            F1.fig.suptitle("components of client")
+            c = Chart()
+            component = c.getClientStatics()
+            content = ['individual', 'team']
+            cols = ['r','m']
+            F1.axes.pie(component,labels=content,startangle=90,shadow=True,explode=(0,0.1),colors=cols,autopct='%1.1f%%')
+            self.gridlayout2.addWidget(F1, 1, 0)
+        except Exception as e:
+            print(f"绘制客户组成图表时出错: {e}")
+            QMessageBox.warning(self, "警告", f"绘制客户组成图表时出错: {e}", QMessageBox.Ok)
 
     def plotClient(self):
-        c = Chart()
-        x, y = c.getStaffStatics()
-        F = Figure_Canvas(width=6, height=2, dpi=100)
-        F.axes.bar(x, y)
-        F.fig.suptitle("  staff performance: the order number they address")
-        self.gridlayout2.addWidget(F, 2, 0)
+        try:
+            c = Chart()
+            x, y = c.getStaffStatics()
+            F = Figure_Canvas(width=6, height=2, dpi=100)
+            F.axes.bar(x, y)
+            F.fig.suptitle("  staff performance: the order number they address")
+            self.gridlayout2.addWidget(F, 2, 0)
+        except Exception as e:
+            print(f"绘制员工业绩图表时出错: {e}")
+            QMessageBox.warning(self, "警告", f"绘制员工业绩图表时出错: {e}", QMessageBox.Ok)
 class RoomOp(QMainWindow, Ui_RoomWindow):
     def __init__(self,parent=None):
         super(RoomOp, self).__init__(parent)

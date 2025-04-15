@@ -330,7 +330,7 @@ class Ui_StaffWindow(object):
 "border-radius:5px")
         self.searchNB.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("../../../pictures/search.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("references/pictures/search.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.searchNB.setIcon(icon1)
         self.searchNB.setIconSize(QtCore.QSize(22, 22))
         self.searchNB.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
