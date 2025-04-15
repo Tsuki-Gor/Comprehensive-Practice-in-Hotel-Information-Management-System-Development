@@ -114,6 +114,8 @@ class Database:
                 self.cursor = self.conn.cursor()
                 # 设置日期格式
                 self.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+                # 设置当前模式为HR
+                self.cursor.execute("ALTER SESSION SET CURRENT_SCHEMA = HR")
                 # 设置自动提交
                 self.conn.autocommit = False
             except Exception as e:
@@ -136,11 +138,14 @@ class Database:
                 # 检查是否需要添加模式前缀
                 schema_prefix = localConfig.get('schema_prefix', '')
                 
-                # 处理表名前缀
+                # 处理表名前缀和别名
+                # 移除 AS 关键字
+                sql = re.sub(r'\s+[Aa][Ss]\s+([A-Za-z0-9_]+)', r' \1', sql)
+                
                 if schema_prefix:
                     # 使用更简单可靠的正则表达式处理表名前缀
-                    # 匹配常见SQL关键字后的表名，但不替换已有前缀的表名
-                    pattern = r'\b(FROM|JOIN|UPDATE|INTO|DELETE FROM)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.HR)'
+                    # 匹配常见SQL关键字后的表名，但不替换已有前缀的表名和dual表
+                    pattern = r'\b(FROM|JOIN|UPDATE|INTO|DELETE FROM)\s+(?!dual\b)([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.HR)'
                     replacement = r'\1 HR.\2'
                     print(f"正则表达式模式: {pattern}")
                     print(f"替换模式: {replacement}")
@@ -233,8 +238,12 @@ class Database:
                     
                     # 处理日期类型参数
                     for key, value in param_dict.items():
-                        if isinstance(value, datetime.datetime):
-                            param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+                        if isinstance(value, (datetime.datetime, datetime.date)):
+                            # 将日期时间转换为datetime对象
+                            if isinstance(value, datetime.datetime):
+                                param_dict[key] = value
+                            else:  # datetime.date
+                                param_dict[key] = datetime.datetime.combine(value, datetime.time())
                     
                     print(f"最终执行Oracle查询: {sql}")
                     print(f"参数: {param_dict}")
@@ -359,118 +368,34 @@ class Database:
         
         try:
             if self.db_type == "ORACLE":
-                # 处理Oracle的序列和返回值
-                if sql.strip().upper().startswith("INSERT"):
-                    # 提取表名，用于获取序列
-                    table_match = re.search(r"INSERT\s+INTO\s+([^\s(]+)", sql, re.IGNORECASE)
-                    if table_match:
-                        table_name = table_match.group(1)
-                        # 移除可能的模式名前缀
-                        if '.' in table_name:
-                            schema_prefix = table_name.split('.')[0]
-                            table_name = table_name.split('.')[-1]
-                            print(f"从INSERT语句中提取表名: {table_name}，模式前缀: {schema_prefix}")
-                        
-                        # 尝试从SQL中提取主键列名
-                        id_column = "ID"  # 默认主键列名
-                        column_match = re.search(r"INSERT\s+INTO\s+[^\s(]+\s*\(([^)]+)\)", sql, re.IGNORECASE)
-                        if column_match:
-                            columns = [col.strip() for col in column_match.group(1).split(',')]
-                            # 假设第一列是主键
-                            if columns and columns[0].upper().endswith('ID'):
-                                id_column = columns[0].strip()
-                        
-                        # 检查是否需要使用序列
-                        # 如果SQL中包含VALUES子句，并且第一个值是%s，则可能需要使用序列
-                        values_match = re.search(r"VALUES\s*\(([^)]+)\)", sql, re.IGNORECASE)
-                        if values_match:
-                            values = [val.strip() for val in values_match.group(1).split(',')]
-                            if values and values[0] == '%s' and len(params) > 0 and params[0] is None:
-                                # 假设每个表有对应的序列: 表名_SEQ
-                                seq_name = f"{table_name}_SEQ"
-                                try:
-                                    # 获取序列的下一个值
-                                    self.cursor.execute(f"SELECT {seq_name}.NEXTVAL FROM DUAL")
-                                    seq_value = self.cursor.fetchone()[0]
-                                    # 替换第一个参数为序列值
-                                    params_list = list(params)
-                                    params_list[0] = seq_value
-                                    params = tuple(params_list)
-                                except Exception as seq_error:
-                                    print(f"序列获取错误: {seq_error}，尝试使用RETURNING子句")
-                        
-                        # 修改SQL以返回生成的ID
-                        returning_sql = sql + f" RETURNING {id_column} INTO :new_id"
-                        
-                        # 准备接收返回值的变量
-                        new_id_var = self.cursor.var(cx_Oracle.NUMBER)
-                        
-                        # 处理参数绑定
-                        if params:
-                            param_count = sql.count('%s')
-                            for i in range(1, param_count + 1):
-                                returning_sql = returning_sql.replace('%s', f':{i}', 1)
-                            
-                            param_dict = {str(i+1): params[i] for i in range(len(params))}
-                            # 处理日期类型参数
-                            for key, value in param_dict.items():
-                                if isinstance(value, datetime.datetime):
-                                    param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            param_dict['new_id'] = new_id_var
-                            
-                            try:
-                                self.cursor.execute(returning_sql, param_dict)
-                                # 获取生成的ID
-                                last_id = new_id_var.getvalue()
-                            except Exception as returning_error:
-                                print(f"RETURNING子句执行错误: {returning_error}，尝试普通执行")
-                                # 如果RETURNING子句失败，回退到普通执行
-                                sql_normal = sql
-                                for i in range(1, param_count + 1):
-                                    sql_normal = sql_normal.replace('%s', f':{i}', 1)
-                                self.cursor.execute(sql_normal, param_dict)
-                        else:
-                            try:
-                                param_dict = {'new_id': new_id_var}
-                                self.cursor.execute(returning_sql, param_dict)
-                                # 获取生成的ID
-                                last_id = new_id_var.getvalue()
-                            except Exception as returning_error:
-                                print(f"RETURNING子句执行错误: {returning_error}，尝试普通执行")
-                                # 如果RETURNING子句失败，回退到普通执行
-                                self.cursor.execute(sql)
-                    else:
-                        # 如果无法提取表名，则正常执行
-                        if params:
-                            param_count = sql.count('%s')
-                            for i in range(1, param_count + 1):
-                                sql = sql.replace('%s', f':{i}', 1)
-                            
-                            param_dict = {str(i+1): params[i] for i in range(len(params))}
-                            # 处理日期类型参数
-                            for key, value in param_dict.items():
-                                if isinstance(value, datetime.datetime):
-                                    param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
-                            
-                            self.cursor.execute(sql, param_dict)
-                        else:
-                            self.cursor.execute(sql)
-                else:  # UPDATE, DELETE等
-                    if params:
-                        param_count = sql.count('%s')
-                        for i in range(1, param_count + 1):
-                            sql = sql.replace('%s', f':{i}', 1)
-                        
-                        param_dict = {str(i+1): params[i] for i in range(len(params))}
-                        # 处理日期类型参数
-                        for key, value in param_dict.items():
-                            if isinstance(value, datetime.datetime):
-                                param_dict[key] = value.strftime('%Y-%m-%d %H:%M:%S')
-                        
-                        self.cursor.execute(sql, param_dict)
-                    else:
-                        self.cursor.execute(sql)
+                # 处理Oracle的参数绑定
+                if params:
+                    # 创建新的SQL语句，使用Oracle的命名参数
+                    new_sql = sql
+                    param_dict = {}
+                    
+                    # 将%s替换为:n形式的参数
+                    param_count = sql.count('%s')
+                    for i in range(param_count):
+                        param_name = str(i + 1)
+                        new_sql = new_sql.replace('%s', f':{param_name}', 1)
+                        if i < len(params):
+                            param_dict[param_name] = params[i]
+                    
+                    # 处理特殊类型
+                    for key, value in param_dict.items():
+                        if isinstance(value, (datetime.datetime, datetime.date)):
+                            param_dict[key] = value
+                        elif isinstance(value, bool):
+                            param_dict[key] = 1 if value else 0
+                        elif value is None:
+                            param_dict[key] = None
+                    
+                    print(f"执行Oracle SQL: {new_sql}")
+                    print(f"参数: {param_dict}")
+                    self.cursor.execute(new_sql, param_dict)
+                else:
+                    self.cursor.execute(sql)
             else:  # MySQL
                 self.cursor.execute(sql, params)
                 last_id = self.cursor.lastrowid
@@ -1122,8 +1047,6 @@ class Room:
         # 使用Database类连接数据库，自动适配MySQL和Oracle
         self.db_type = service.config.DB_TYPE.upper()
         self.database = Database()
-        self.cursor = self.database.cursor
-        self.conn = self.database.conn
         
         # 获取数据库版本信息
         try:
@@ -1370,37 +1293,39 @@ class Room:
             sql = ("select * from checkin_team as A where (A.rid=%s) and ((A.end_time>%s and A.start_time<%s) "
                    "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))")
             data2 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data2 = self.cursor.fetchall()
             print(data2)
-            self.cursor.execute(
-                "select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)"
-                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data3 = self.cursor.fetchall()
+            
+            sql = ("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data3 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             print(data3)
-            self.cursor.execute("select * from booking_team as A where (A.rid=%s) and ((A.end_time>%s and A.start_time<%s) "
-                                "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))"
-                                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data4 = self.cursor.fetchall()
+            
+            sql = ("select * from booking_team as A where (A.rid=%s) and ((A.end_time>%s and A.start_time<%s) "
+                   "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))")
+            data4 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             print(data4)
-            if data1 != () or data2 != () or data3 != () or data4 != ():
+            if data1 or data2 or data3 or data4:
                 QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
                 return False
         try:
             for i in re.split(',|，| ', ttrid):
-                self.cursor.execute("select * from team where tid=%s", (tid))
-                data = self.cursor.fetchall()
-                if data == ():
-                    self.cursor.execute("insert into team(tname,tid,tphone,check_in_sid,accomodation_times) values(%s,%s,%s,%s,%s)",
-                                        (tname, tid, tphone, self.staff.sid, 0))
+                # 检查团队是否存在
+                sql = "select * from team where tid=%s"
+                data = self.database.query(sql, (tid,))
+                if not data:
+                    sql = "insert into team(tname,tid,tphone,check_in_sid,accomodation_times) values(%s,%s,%s,%s,%s)"
+                    self.database.execute(sql, (tname, tid, tphone, self.staff.sid, 0))
 
-                self.cursor.execute("select * from room where rid=%s",(i))
-                perPrice = self.cursor.fetchall()[0]['rprice']
+                # 获取房间价格
+                sql = "select * from room where rid=%s"
+                data = self.database.query(sql, (i,))
+                perPrice = data[0]['rprice']
                 starttime = datetime.date.today()
                 totalPrice = int(perPrice) * int((tendtime - starttime).days)
-                self.cursor.execute("insert into checkin_team values(%s,%s,%s,%s,%s,%s,%s)",
-                                    (i, tid, starttime, tendtime, totalPrice, self.staff.sid, tremark))
-            self.db.commit()
+                
+                # 插入入住记录
+                sql = "insert into checkin_team values(%s,%s,%s,%s,%s,%s,%s)"
+                self.database.execute(sql, (i, tid, starttime, tendtime, totalPrice, self.staff.sid, tremark))
             return True
         except Exception as e:
             print(e)
@@ -1410,27 +1335,29 @@ class Room:
         """个人预约订单入住"""
         # 先查找预约表
         starttime = datetime.date.today()
-        self.cursor.execute("select * from booking_client where cid=%s and rid=%s and start_time=%s",(cid,rid,starttime))
-        data = self.cursor.fetchall()
-        if data == ():
+        sql = "select * from booking_client where cid=%s and rid=%s and start_time=%s"
+        data = self.database.query(sql, (cid,rid,starttime))
+        if not data:
             QMessageBox().information(None, "提示", "没有对应预约或者预约入住时间未到！", QMessageBox.Yes)
             return False
         # 再从预约表中获取相关信息
         endtime = data[0]['end_time']
         remark = data[0]['remark']
         # 下面计算房价
-        self.cursor.execute("select * from room where rid=%s",(rid))
-        data = self.cursor.fetchall()
-        if data == ():
+        sql = "select * from room where rid=%s"
+        data = self.database.query(sql, (rid,))
+        if not data:
             QMessageBox().information(None, "提示", "没有对应房间号！", QMessageBox.Yes)
             return False
         perPrice = data[0]['rprice']
         totalPrice = int(perPrice) * int((endtime-starttime).days)
         try:
-            self.cursor.execute("insert into checkin_client values(%s,%s,%s,%s,%s,%s,%s)",
-                                (rid,cid,starttime,endtime,totalPrice,self.staff.sid,remark))
-            self.cursor.execute("delete from booking_client where cid=%s and rid=%s and start_time=%s",(cid,rid,starttime))
-            self.db.commit()
+            # 插入入住记录
+            sql = "insert into checkin_client values(%s,%s,%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (rid,cid,starttime,endtime,totalPrice,self.staff.sid,remark))
+            # 删除预约记录
+            sql = "delete from booking_client where cid=%s and rid=%s and start_time=%s"
+            self.database.execute(sql, (cid,rid,starttime))
             return True
         except Exception as e:
             print(e)
@@ -1442,30 +1369,31 @@ class Room:
         starttime = datetime.date.today()
         for rid in re.split(',|，| ', rrid):
             print(rid)
-            self.cursor.execute("select * from booking_team where tid=%s and rid=%s and start_time=%s",
-                                (tid, rid, starttime))
-            data = self.cursor.fetchall()
+            # 查询预约信息
+            sql = "select * from booking_team where tid=%s and rid=%s and start_time=%s"
+            data = self.database.query(sql, (tid, rid, starttime))
             print(data)
-            if data == ():
+            if not data:
                 QMessageBox().information(None, "提示", "%s房间没有对应预约或者预约入住时间未到！"%rid, QMessageBox.Yes)
                 return False
             # 再从预约表中获取相关信息
             endtime = data[0]['end_time']
             remark = data[0]['remark']
             # 下面计算房价
-            self.cursor.execute("select * from room where rid=%s", (rid))
-            data = self.cursor.fetchall()
-            if data == ():
+            sql = "select * from room where rid=%s"
+            data = self.database.query(sql, (rid,))
+            if not data:
                 QMessageBox().information(None, "提示", "没有%s房间号！"%rid, QMessageBox.Yes)
                 return False
             perPrice = data[0]['rprice']
             totalPrice = int(perPrice) * int((endtime - starttime).days)
             try:
-                self.cursor.execute("insert into checkin_team values(%s,%s,%s,%s,%s,%s,%s)",
-                                    (rid, tid, starttime, endtime, totalPrice, self.staff.sid, remark))
-                self.cursor.execute("delete from booking_team where tid=%s and rid=%s and start_time=%s",
-                                    (tid, rid, starttime))
-                self.db.commit()
+                # 插入入住记录
+                sql = "insert into checkin_team values(%s,%s,%s,%s,%s,%s,%s)"
+                self.database.execute(sql, (rid, tid, starttime, endtime, totalPrice, self.staff.sid, remark))
+                # 删除预约记录
+                sql = "delete from booking_team where tid=%s and rid=%s and start_time=%s"
+                self.database.execute(sql, (tid, rid, starttime))
             except Exception as e:
                 print(e)
                 return False
@@ -1474,36 +1402,43 @@ class Room:
     def reserveCDB(self,cname,cid,cphone,cage,csex,crid,cstarttime,cendtime,cremark):
         """个人预约"""
         starttime = datetime.date.today()
-        self.cursor.execute("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
-        data1 = self.cursor.fetchall()
-        self.cursor.execute("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
-        data2 = self.cursor.fetchall()
-        self.cursor.execute("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
-        data3 = self.cursor.fetchall()
-        self.cursor.execute("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                            "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                            , (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
-        data4 = self.cursor.fetchall()
-        if data1 != () or data2 != () or data3 != () or data4 != ():
+        # 检查入住客户冲突
+        sql = ("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data1 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查入住团队冲突
+        sql = ("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data2 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查预订客户冲突
+        sql = ("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data3 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        # 检查预订团队冲突
+        sql = ("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+               "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+        data4 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
+        
+        if data1 or data2 or data3 or data4:
             QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
             return False
-        self.cursor.execute("select * from client where cid=%s",(cid))
-        data = self.cursor.fetchall()
-        if data == ():
-            self.cursor.execute(
-                "insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) values(%s,%s,%s,%s,%s,%s,%s)",
-                (cname, cid, cphone, cage, csex, self.staff.sid, 0))
+        
+        # 检查客户是否存在
+        sql = "select * from client where cid=%s"
+        data = self.database.query(sql, (cid,))
+        if not data:
+            # 插入新客户
+            sql = "insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) values(%s,%s,%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (cname, cid, cphone, cage, csex, self.staff.sid, 0))
+        
         try:
-            self.cursor.execute("insert into booking_client(cid,rid,start_time,end_time,remark) values(%s,%s,%s,%s,%s)",
-                                (cid,crid,cstarttime,cendtime,cremark))
-            self.db.commit()
-            return  True
+            # 插入预约记录
+            sql = "insert into booking_client(cid,rid,start_time,end_time,remark) values(%s,%s,%s,%s,%s)"
+            self.database.execute(sql, (cid,crid,cstarttime,cendtime,cremark))
+            return True
         except Exception as e:
             print(e)
             QMessageBox().information(None, "提示", "相关预约信息已存在！", QMessageBox.Yes)
@@ -1512,37 +1447,42 @@ class Room:
     def reserveTDB(self,tname,tid,tphone,ttrid,tstarttime,tendtime,tremark):
         """团体预约"""
         for trid in re.split(',|，| ', ttrid):
-            self.cursor.execute(
-                "select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data1 = self.cursor.fetchall()
-            self.cursor.execute("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data2 = self.cursor.fetchall()
-            self.cursor.execute(
-                "select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data3 = self.cursor.fetchall()
-            self.cursor.execute("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
-                                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>%s or A.start_time>=%s and A.end_time<=%s)"
-                                , (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
-            data4 = self.cursor.fetchall()
-            if data1 != () or data2 != () or data3 != () or data4 != ():
+            # 检查入住客户冲突
+            sql = ("select * from checkin_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data1 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
+            
+            # 检查入住团队冲突
+            sql = ("select * from checkin_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data2 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
+            
+            # 检查预订客户冲突
+            sql = ("select * from booking_client as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data3 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
+            
+            # 检查预订团队冲突
+            sql = ("select * from booking_team as A where (A.rid=%s) and (A.end_time>%s and A.start_time<%s "
+                   "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
+            data4 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
+            
+            if data1 or data2 or data3 or data4:
                 QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
                 return False
-            self.cursor.execute("select * from team where tid=%s", (tid))
-            data = self.cursor.fetchall()
-            if data == ():
-                self.cursor.execute(
-                    "insert into team(tname,tid,tphone,check_in_sid,accomodation_times) values(%s,%s,%s,%s,%s)",
-                    (tname, tid, tphone, self.staff.sid, 0))
+            
+            # 检查团队是否存在
+            sql = "select * from team where tid=%s"
+            data = self.database.query(sql, (tid,))
+            if not data:
+                # 插入新团队
+                sql = "insert into team(tname,tid,tphone,check_in_sid,accomodation_times) values(%s,%s,%s,%s,%s)"
+                self.database.execute(sql, (tname, tid, tphone, self.staff.sid, 0))
+            
             try:
-                self.cursor.execute("insert into booking_team(tid,rid,start_time,end_time,remark) values(%s,%s,%s,%s,%s)",
-                                    (tid, trid, tstarttime, tendtime, tremark))
-                self.db.commit()
+                # 插入预约记录
+                sql = "insert into booking_team(tid,rid,start_time,end_time,remark) values(%s,%s,%s,%s,%s)"
+                self.database.execute(sql, (tid, trid, tstarttime, tendtime, tremark))
             except Exception as e:
                 print(e)
                 QMessageBox().information(None, "提示", "相关预约信息已存在！", QMessageBox.Yes)
@@ -1551,13 +1491,17 @@ class Room:
 
     def cancelReserveCDB(self,cancel_cid,cancel_rid):
         """个人取消预约"""
-        self.cursor.execute("select * from booking_client where cid=%s and rid=%s",(cancel_cid,cancel_rid))
-        if self.cursor.fetchall() == ():
+        # 检查预约是否存在
+        sql = "select * from booking_client where cid=%s and rid=%s"
+        data = self.database.query(sql, (cancel_cid,cancel_rid))
+        if not data:
             QMessageBox().information(None, "提示", "没有相关预约信息！", QMessageBox.Yes)
             return False
+        
         try:
-            self.cursor.execute("delete from booking_client where cid=%s and rid=%s",(cancel_cid,cancel_rid))
-            self.db.commit()
+            # 删除预约记录
+            sql = "delete from booking_client where cid=%s and rid=%s"
+            self.database.execute(sql, (cancel_cid,cancel_rid))
             return True
         except Exception as e:
             print(e)
@@ -1568,12 +1512,16 @@ class Room:
         """团体取消预约"""
         try:
             for r in re.split(',|，| ', cancel_rid):
-                self.cursor.execute("select * from booking_team where tid=%s and rid=%s", (cancel_tid, r))
-                if self.cursor.fetchall() == ():
+                # 检查预约是否存在
+                sql = "select * from booking_team where tid=%s and rid=%s"
+                data = self.database.query(sql, (cancel_tid, r))
+                if not data:
                     QMessageBox().information(None, "提示", "%s房间没有预约！"%r, QMessageBox.Yes)
                     return False
-                self.cursor.execute("delete from booking_team where tid=%s and rid=%s",(cancel_tid,r))
-            self.db.commit()
+                
+                # 删除预约记录
+                sql = "delete from booking_team where tid=%s and rid=%s"
+                self.database.execute(sql, (cancel_tid,r))
             return True
         except Exception as e:
             print(e)
@@ -1636,75 +1584,85 @@ class Room:
 
         """
         try:
+            # 创建Database实例
+            db = Database()
+            
             if flag == '个人':
                 # 查询入住信息
-                self.cursor.execute("SELECT * FROM checkin_client WHERE rid=%s AND cid=%s", (rid, id))
-                data = self.cursor.fetchone()
-
+                data = db.query("SELECT * FROM checkin_client WHERE rid=:1 AND cid=:2", (rid, id))
                 if not data:
                     QMessageBox().information(None, "提示", "没有相关入住信息！", QMessageBox.Yes)
                     return False
 
                 # 提取数据
-                rid_out, cid_out, stime_out, etime_out, money = data['rid'], data['cid'], data['start_time'], data[
-                    'end_time'], data['total_price']
+                data = data[0]  # 获取第一条记录
+                rid_out, cid_out, stime_out, etime_out, money = data['rid'], data['cid'], data['start_time'], data['end_time'], data['total_price']
+
+                # 获取新的订单ID
+                if db.db_type == "ORACLE":
+                    result = db.query("SELECT hotelorder_v1_seq.nextval FROM dual")
+                    order_id = result[0]['nextval']
+                else:
+                    order_id = None
 
                 # 插入新订单到 hotelorder_v1
-                self.cursor.execute("""
-                    INSERT INTO hotelorder_v1 (id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
-                """, (cid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
-                
-                # 获取新插入订单的ID
-                order_id = self.cursor.lastrowid
+                db.execute("""
+                    INSERT INTO hotelorder_v1 (order_id, id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
+                    VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, 'pending', 'pending')
+                """, (order_id, cid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
 
                 # 删除入住记录
-                self.cursor.execute("DELETE FROM checkin_client WHERE rid=%s AND cid=%s", (rid_out, cid_out))
+                db.execute("DELETE FROM checkin_client WHERE rid=:1 AND cid=:2", (rid_out, cid_out))
 
                 # 记录订单创建历史
-                order_manager = OrderStatusManager(self.db)
+                order_manager = OrderStatusManager(db.conn)
                 order_manager.update_order_status(order_id, 'pending', self.staff.sid, "退房创建订单")
 
                 # 提交事务
-                self.db.commit()
+                db.conn.commit()
 
                 QMessageBox().information(None, "提示", f"本次需要支付 {money}，订单已生成！", QMessageBox.Yes)
 
             elif flag == '团队':
                 total_sum = 0
                 rooms = rid.split(",")  # 支持多个房间退房
+                order_ids = []  # 初始化order_ids列表
 
                 for room_id in rooms:
                     # 查询入住信息
-                    self.cursor.execute("SELECT * FROM checkin_team WHERE rid=%s AND tid=%s", (room_id.strip(), id))
-                    data = self.cursor.fetchone()
-
+                    data = db.query("SELECT * FROM checkin_team WHERE rid=:1 AND tid=:2", (room_id.strip(), id))
                     if not data:
                         QMessageBox().information(None, "提示", f"房间 {room_id} 没有相关入住信息！", QMessageBox.Yes)
                         return False
 
                     # 提取数据
-                    rid_out, tid_out, stime_out, etime_out, money = data['rid'], data['tid'], data['start_time'], data[
-                        'end_time'], data['total_price']
+                    data = data[0]  # 获取第一条记录
+                    rid_out, tid_out, stime_out, etime_out, money = data['rid'], data['tid'], data['start_time'], data['end_time'], data['total_price']
                     total_sum += int(money)
 
-                    # 插入新订单到 hotelorder_v1
-                    self.cursor.execute("""
-                        INSERT INTO hotelorder_v1 (id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 'pending')
-                    """, (tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
+                    # 获取新的订单ID
+                    if db.db_type == "ORACLE":
+                        result = db.query("SELECT hotelorder_v1_seq.nextval FROM dual")
+                        order_id = result[0]['nextval']
+                    else:
+                        order_id = None
 
-                    # 获取新插入订单的ID
-                    order_ids.append(self.cursor.lastrowid)
+                    # 插入新订单到 hotelorder_v1
+                    db.execute("""
+                        INSERT INTO hotelorder_v1 (order_id, id, ordertype, start_time, end_time, rid, pay_type, money, remark, register_sid, order_status, pay_status)
+                        VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, 'pending', 'pending')
+                    """, (order_id, tid_out, flag, stime_out, etime_out, rid_out, payType, money, remark, self.staff.sid))
+
+                    order_ids.append(order_id)
 
                     # 删除入住记录
-                    self.cursor.execute("DELETE FROM checkin_team WHERE rid=%s AND tid=%s", (rid_out, tid_out))
+                    db.execute("DELETE FROM checkin_team WHERE rid=:1 AND tid=:2", (rid_out, tid_out))
 
                 # 提交事务
-                self.db.commit()
+                db.conn.commit()
 
                 # 记录订单创建历史
-                order_manager = OrderStatusManager(self.db)
+                order_manager = OrderStatusManager(db.conn)
                 for order_id in order_ids:
                     order_manager.update_order_status(order_id, 'pending', self.staff.sid, "团队退房创建订单")
 
@@ -1713,7 +1671,8 @@ class Room:
 
             return True
         except Exception as e:
-            self.db.rollback()  # 遇到异常时回滚，确保数据一致性
+            if 'db' in locals():
+                db.conn.rollback()  # 遇到异常时回滚，确保数据一致性
             print(f"退房错误: {e}")
             return False
 
@@ -3942,7 +3901,7 @@ class OrderStatusManager:
     """
     def __init__(self, db):
         self.db = db
-        self.cursor = db.cursor()
+        self.database = Database()
     
     def update_order_status(self, order_id, new_status, staff_id, remark=None):
         """
@@ -3959,8 +3918,7 @@ class OrderStatusManager:
         """
         try:
             # 获取当前订单状态
-            self.cursor.execute("SELECT order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            result = self.cursor.fetchone()
+            result = self.database.query("SELECT order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
             if not result:
                 return False
                 
@@ -3971,13 +3929,13 @@ class OrderStatusManager:
                 return True
                 
             # 更新订单状态
-            self.cursor.execute(
+            self.database.execute(
                 "UPDATE hotelorder_v1 SET order_status = %s WHERE order_id = %s",
                 (new_status, order_id)
             )
             
             # 记录状态变更历史
-            self.cursor.execute(
+            self.database.execute(
                 """INSERT INTO order_history 
                    (order_id, previous_status, new_status, changed_by, remark) 
                    VALUES (%s, %s, %s, %s, %s)""",
@@ -4007,8 +3965,7 @@ class OrderStatusManager:
         """
         try:
             # 获取当前支付状态
-            self.cursor.execute("SELECT pay_status, order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            result = self.cursor.fetchone()
+            result = self.database.query("SELECT pay_status, order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
             if not result:
                 return False
                 
@@ -4020,7 +3977,7 @@ class OrderStatusManager:
                 return True
                 
             # 更新支付状态
-            self.cursor.execute(
+            self.database.execute(
                 "UPDATE hotelorder_v1 SET pay_status = %s WHERE order_id = %s",
                 (new_status, order_id)
             )
@@ -4029,13 +3986,13 @@ class OrderStatusManager:
             new_order_status = current_order_status
             if new_status == 'paid' and current_order_status == 'pending':
                 new_order_status = 'paid'
-                self.cursor.execute(
+                self.database.execute(
                     "UPDATE hotelorder_v1 SET order_status = %s WHERE order_id = %s",
                     (new_order_status, order_id)
                 )
                 
                 # 记录订单状态变更历史
-                self.cursor.execute(
+                self.database.execute(
                     """INSERT INTO order_history 
                        (order_id, previous_status, new_status, changed_by, remark) 
                        VALUES (%s, %s, %s, %s, %s)""",
@@ -4064,8 +4021,7 @@ class OrderStatusManager:
         """
         try:
             # 获取当前订单状态
-            self.cursor.execute("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            result = self.cursor.fetchone()
+            result = self.database.query("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
             if not result:
                 return False
                 
@@ -4077,13 +4033,13 @@ class OrderStatusManager:
                 return False
                 
             # 更新订单状态为取消
-            self.cursor.execute(
+            self.database.execute(
                 "UPDATE hotelorder_v1 SET order_status = 'cancelled' WHERE order_id = %s",
                 (order_id,)
             )
             
             # 记录状态变更历史
-            self.cursor.execute(
+            self.database.execute(
                 """INSERT INTO order_history 
                    (order_id, previous_status, new_status, changed_by, remark) 
                    VALUES (%s, %s, %s, %s, %s)""",
@@ -4112,8 +4068,7 @@ class OrderStatusManager:
         """
         try:
             # 获取当前订单状态和支付状态
-            self.cursor.execute("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            result = self.cursor.fetchone()
+            result = self.database.query("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
             if not result:
                 return False
                 
@@ -4125,13 +4080,13 @@ class OrderStatusManager:
                 return False
                 
             # 更新订单状态为完成
-            self.cursor.execute(
+            self.database.execute(
                 "UPDATE hotelorder_v1 SET order_status = 'completed' WHERE order_id = %s",
                 (order_id,)
             )
             
             # 记录状态变更历史
-            self.cursor.execute(
+            self.database.execute(
                 """INSERT INTO order_history 
                    (order_id, previous_status, new_status, changed_by, remark) 
                    VALUES (%s, %s, %s, %s, %s)""",
@@ -4157,13 +4112,12 @@ class OrderStatusManager:
             list: 订单状态变更历史记录列表
         """
         try:
-            self.cursor.execute(
+            return self.database.query(
                 """SELECT * FROM order_history 
                    WHERE order_id = %s 
                    ORDER BY change_time DESC""",
                 (order_id,)
             )
-            return self.cursor.fetchall()
         except Exception as e:
             print(f"获取订单历史错误: {e}")
             return []
@@ -4177,18 +4131,8 @@ class OrderService:
     订单服务类
     负责处理订单支付、完成、取消等操作
     """
-    def __init__(self, db=None):
-        if db is None:
-            self.db = pymysql.connect(host=localConfig['host'],
-                                     port=localConfig['port'],
-                                     user=localConfig['user'],
-                                     passwd=localConfig['passwd'],
-                                     db=localConfig['db'],
-                                     charset=localConfig['charset'],
-                                     cursorclass=pymysql.cursors.DictCursor)
-        else:
-            self.db = db
-        self.cursor = self.db.cursor()
+    def __init__(self):
+        self.database = Database()
         self.staff = get_staff()
     
     def processPayment(self, order_id, pay_method, amount, remark=None):
@@ -4206,8 +4150,7 @@ class OrderService:
         """
         try:
             # 查询订单信息
-            self.cursor.execute("SELECT money, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            order_data = self.cursor.fetchone()
+            order_data = self.database.query("SELECT money, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))[0]
             
             if not order_data:
                 QMessageBox().information(None, "提示", "订单不存在！", QMessageBox.Yes)
@@ -4238,13 +4181,13 @@ class OrderService:
             if pay_method not in allowed_methods:
                 raise ValueError(f"不支持的支付方式。支持的支付方式包括: {', '.join(allowed_methods)}")
                 
-            self.cursor.execute("""
+            self.database.execute("""
                 INSERT INTO payment (order_id, pay_amount, pay_method, payment_status, transaction_id, pay_time, remark)
                 VALUES (%s, %s, %s, 'paid', %s, %s, %s)
             """, (order_id, amount, pay_method, transaction_id, datetime.datetime.now(), remark))
             
             # 更新订单支付状态
-            order_manager = OrderStatusManager(self.db)
+            order_manager = OrderStatusManager(None)
             result = order_manager.update_payment_status(order_id, 'paid', self.staff.sid, f"通过{pay_method}支付")
             
             if result:
@@ -4273,7 +4216,7 @@ class OrderService:
             bool: 操作是否成功
         """
         try:
-            order_manager = OrderStatusManager(self.db)
+            order_manager = OrderStatusManager(None)
             result = order_manager.complete_order(order_id, self.staff.sid, remark)
             
             if result:
@@ -4300,7 +4243,7 @@ class OrderService:
             bool: 操作是否成功
         """
         try:
-            order_manager = OrderStatusManager(self.db)
+            order_manager = OrderStatusManager(None)
             result = order_manager.cancel_order(order_id, self.staff.sid, reason)
             
             if result:
@@ -4326,7 +4269,7 @@ class OrderService:
             list: 订单状态变更历史记录列表
         """
         try:
-            order_manager = OrderStatusManager(self.db)
+            order_manager = OrderStatusManager(None)
             return order_manager.get_order_history(order_id)
         except Exception as e:
             print(f"获取订单历史错误: {e}")
@@ -4343,13 +4286,13 @@ class OrderService:
             dict: 订单详细信息
         """
         try:
-            self.cursor.execute("""
+            result = self.database.query("""
                 SELECT o.*, p.pay_amount, p.pay_method, p.payment_status, p.transaction_id, p.pay_time 
                 FROM hotelorder_v1 o
                 LEFT JOIN payment p ON o.order_id = p.order_id
                 WHERE o.order_id = %s
             """, (order_id,))
-            return self.cursor.fetchone()
+            return result[0] if result else None
         except Exception as e:
             print(f"获取订单详情错误: {e}")
             return None
@@ -4367,12 +4310,11 @@ class OrderService:
         """
         try:
             order_type = '团队' if is_team else '个人'
-            self.cursor.execute("""
+            return self.database.query("""
                 SELECT * FROM hotelorder_v1
                 WHERE id = %s AND ordertype = %s
                 ORDER BY order_id DESC
             """, (customer_id, order_type))
-            return self.cursor.fetchall()
         except Exception as e:
             print(f"获取客户订单错误: {e}")
             return []
