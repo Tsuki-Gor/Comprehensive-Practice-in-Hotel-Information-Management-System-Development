@@ -380,7 +380,11 @@ class Database:
                         param_name = str(i + 1)
                         new_sql = new_sql.replace('%s', f':{param_name}', 1)
                         if i < len(params):
-                            param_dict[param_name] = params[i]
+                            value = params[i]
+                            # 处理列表类型的参数
+                            if isinstance(value, list):
+                                value = value[0] if value else None
+                            param_dict[param_name] = value
                     
                     # 处理特殊类型
                     for key, value in param_dict.items():
@@ -390,6 +394,9 @@ class Database:
                             param_dict[key] = 1 if value else 0
                         elif value is None:
                             param_dict[key] = None
+                        elif isinstance(value, str):
+                            # 确保字符串参数不超过字段长度
+                            param_dict[key] = value[:4000] if len(value) > 4000 else value
                     
                     print(f"执行Oracle SQL: {new_sql}")
                     print(f"参数: {param_dict}")
@@ -1242,7 +1249,7 @@ class Room:
                "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
         data4 = self.database.query(sql, (crid, starttime, starttime, cendtime, cendtime, starttime, cendtime, starttime, cendtime))
         
-        if data1 != () or data2 != () or data3 != () or data4 != ():
+        if data1 or data2 or data3 or data4:
             QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
             return False
         
@@ -1251,11 +1258,16 @@ class Room:
         data = self.database.query(sql, (cid,))
         
         # 如果没有这个人，就添加这个人
-        if data == ():
-            # 插入新客户
-            sql = ("insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) "
-                   "values(%s,%s,%s,%s,%s,%s,%s)")
-            self.database.execute(sql, (cname, cid, cphone, cage, csex, self.staff.sid, 0))
+        if not data:
+            try:
+                # 插入新客户
+                sql = ("insert into client(cname,cid,cphone,cage,csex,register_sid,accomodation_times) "
+                       "values(%s,%s,%s,%s,%s,%s,%s)")
+                self.database.execute(sql, (cname, cid, cphone, cage, csex, self.staff.sid, 0))
+            except Exception as e:
+                print(e)
+                QMessageBox().information(None, "提示", "添加客户信息失败！", QMessageBox.Yes)
+                return False
         
         # 检查房间是否存在
         sql = "select * from room where rid=%s"
@@ -1304,7 +1316,7 @@ class Room:
                    "or (A.end_time>%s and A.start_time<%s) or (A.start_time<=%s and A.end_time>=%s) or (A.start_time>=%s and A.end_time<=%s))")
             data4 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             print(data4)
-            if data1 or data2 or data3 or data4:
+            if any([data1, data2, data3, data4]):
                 QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
                 return False
         try:
@@ -1467,7 +1479,7 @@ class Room:
                    "or A.end_time>%s and A.start_time<%s or A.start_time<=%s and A.end_time>=%s or A.start_time>=%s and A.end_time<=%s)")
             data4 = self.database.query(sql, (trid, tstarttime, tstarttime, tendtime, tendtime, tstarttime, tendtime, tstarttime, tendtime))
             
-            if data1 or data2 or data3 or data4:
+            if any([data1, data2, data3, data4]):
                 QMessageBox().information(None, "提示", "该时间段对应房间被占用（入住/预约）！", QMessageBox.Yes)
                 return False
             
@@ -1946,15 +1958,23 @@ class Chart:
         """
         获取个人和团队订单数量，新版本
         """
-        query = """
-        SELECT 
-            SUM(CASE WHEN ordertype = '个人' THEN 1 ELSE 0 END) AS num_client,
-            SUM(CASE WHEN ordertype = '团队' THEN 1 ELSE 0 END) AS num_team
-        FROM v_client_team_order;
-        """
+        if self.db_type == "ORACLE":
+            query = """
+            SELECT 
+                NVL(SUM(CASE WHEN ordertype = '个人' THEN 1 ELSE 0 END), 0) AS num_client,
+                NVL(SUM(CASE WHEN ordertype = '团队' THEN 1 ELSE 0 END), 0) AS num_team
+            FROM v_client_team_order
+            """
+        else:
+            query = """
+            SELECT 
+                SUM(CASE WHEN ordertype = '个人' THEN 1 ELSE 0 END) AS num_client,
+                SUM(CASE WHEN ordertype = '团队' THEN 1 ELSE 0 END) AS num_team
+            FROM v_client_team_order;
+            """
         # 使用Database类的query方法执行查询，自动处理不同数据库类型
         data = self.database.query(query)
-        return [data[0]['num_client'], data[0]['num_team']]
+        return [int(data[0]['num_client']), int(data[0]['num_team'])]
 
 
     # def getStaffStatics(self):
@@ -1976,12 +1996,21 @@ class Chart:
         """
         获取员工订单处理情况
         """
-        query = """
-        SELECT register_sid, COUNT(*) AS order_count
-        FROM v_order_summary
-        GROUP BY register_sid
-        ORDER BY order_count DESC;
-        """
+        if self.db_type == "ORACLE":
+            query = """
+            SELECT register_sid, COUNT(*) AS order_count
+            FROM v_order_summary
+            WHERE register_sid IS NOT NULL
+            GROUP BY register_sid
+            ORDER BY order_count DESC
+            """
+        else:
+            query = """
+            SELECT register_sid, COUNT(*) AS order_count
+            FROM v_order_summary
+            GROUP BY register_sid
+            ORDER BY order_count DESC;
+            """
         # 使用Database类的query方法执行查询，自动处理不同数据库类型
         data = self.database.query(query)
 
@@ -1989,7 +2018,7 @@ class Chart:
         list_order_count = []
         for row in data:
             list_staff_id.append(row['register_sid'])
-            list_order_count.append(row['order_count'])
+            list_order_count.append(int(row['order_count']))
 
         return list_staff_id, list_order_count
 
