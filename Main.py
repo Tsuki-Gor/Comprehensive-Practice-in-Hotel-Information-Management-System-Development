@@ -375,31 +375,56 @@ class Database:
                     param_dict = {}
                     
                     # 将%s替换为:n形式的参数
-                    param_count = sql.count('%s')
-                    for i in range(param_count):
+                    param_list = list(params)
+                    param_count = len(param_list)  # 使用实际参数数量
+                    
+                    param_num=sql.count('%s')
+                    # 预处理SQL语句，将所有%s替换为:n
+                    for i in range(param_num):
                         param_name = str(i + 1)
                         new_sql = new_sql.replace('%s', f':{param_name}', 1)
-                        if i < len(params):
-                            value = params[i]
-                            # 处理列表类型的参数
-                            if isinstance(value, list):
-                                value = value[0] if value else None
-                            param_dict[param_name] = value
                     
-                    # 处理特殊类型
-                    for key, value in param_dict.items():
-                        if isinstance(value, (datetime.datetime, datetime.date)):
-                            param_dict[key] = value
-                        elif isinstance(value, bool):
-                            param_dict[key] = 1 if value else 0
-                        elif value is None:
-                            param_dict[key] = None
+                    # 处理参数值
+                    param_dict = {}
+                    for i in range(param_count):
+                        param_name = str(i + 1)
+                        value = param_list[i] if i < len(param_list) else None
+                        
+                        # 处理列表类型的参数
+                        if isinstance(value, list):
+                            value = value[0] if value else None
+                        # 处理字符串类型的参数
                         elif isinstance(value, str):
                             # 确保字符串参数不超过字段长度
-                            param_dict[key] = value[:4000] if len(value) > 4000 else value
+                            value = value[:4000] if len(value) > 4000 else value
+                        # 处理日期时间类型的参数
+                        elif isinstance(value, (datetime.datetime, datetime.date)):
+                            value = value
+                        # 处理布尔类型的参数
+                        elif isinstance(value, bool):
+                            value = 1 if value else 0
+                        # 处理None值
+                        elif value is None:
+                            value = None
+                        
+                        param_dict[param_name] = value
+                    
+                    # 处理SQL中的固定值参数
+                    fixed_values = re.findall(r':[a-zA-Z_][a-zA-Z0-9_]*', new_sql)
+                    for fixed_value in fixed_values:
+                        param_name = fixed_value[1:]  # 去掉冒号
+                        if param_name not in param_dict and param_name.lower() not in ['pending']:
+                            param_dict[param_name] = param_name
+                        elif param_name.lower() == 'pending':
+                            param_dict[param_name] = 'pending'
                     
                     print(f"执行Oracle SQL: {new_sql}")
                     print(f"参数: {param_dict}")
+                    
+                    # 确保所有参数都已绑定
+                    if len(param_dict) != param_count:
+                        raise ValueError(f"参数数量不匹配：预期 {param_count} 个，实际 {len(param_dict)} 个")
+                    
                     self.cursor.execute(new_sql, param_dict)
                 else:
                     self.cursor.execute(sql)
@@ -1629,10 +1654,15 @@ class Room:
                 # 记录订单创建历史
                 order_manager = OrderStatusManager(db.conn)
                 order_manager.update_order_status(order_id, 'pending', self.staff.sid, "退房创建订单")
+                
+                # 更新支付状态
+                if payType != 'pending':
+                    order_manager.update_payment_status(order_id, 'paid', self.staff.sid, "退房时完成支付")
+                    order_manager.complete_order(order_id, self.staff.sid, "退房完成")
 
                 # 提交事务
                 db.conn.commit()
-
+                
                 QMessageBox().information(None, "提示", f"本次需要支付 {money}，订单已生成！", QMessageBox.Yes)
 
             elif flag == '团队':
@@ -1670,8 +1700,20 @@ class Room:
                     # 删除入住记录
                     db.execute("DELETE FROM checkin_team WHERE rid=:1 AND tid=:2", (rid_out, tid_out))
 
+                # 记录订单状态
+                order_manager = OrderStatusManager(db.conn)
+                for order_id in order_ids:
+                    order_manager.update_order_status(order_id, 'pending', self.staff.sid, "团队退房创建订单")
+                    
+                    # 更新支付状态
+                    if payType != 'pending':
+                        order_manager.update_payment_status(order_id, 'paid', self.staff.sid, "团队退房时完成支付")
+                        order_manager.complete_order(order_id, self.staff.sid, "团队退房完成")
+
                 # 提交事务
                 db.conn.commit()
+                
+                QMessageBox().information(None, "提示", f"本次需要支付 {total_sum}，订单已生成！", QMessageBox.Yes)
 
                 # 记录订单创建历史
                 order_manager = OrderStatusManager(db.conn)
@@ -3948,10 +3990,10 @@ class OrderStatusManager:
         try:
             # 获取当前订单状态
             result = self.database.query("SELECT order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            if not result:
+            if not result or len(result) == 0:
                 return False
                 
-            previous_status = result['order_status']
+            previous_status = result[0]['order_status']
             
             # 如果状态没有变化，直接返回成功
             if previous_status == new_status:
@@ -3964,12 +4006,20 @@ class OrderStatusManager:
             )
             
             # 记录状态变更历史
-            self.database.execute(
-                """INSERT INTO order_history 
-                   (order_id, previous_status, new_status, changed_by, remark) 
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (order_id, previous_status, new_status, staff_id, remark)
-            )
+            if service.config.DB_TYPE.upper() == "ORACLE":
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (history_id, order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (order_history_seq.NEXTVAL, :1, :2, :3, :4, :5)""",
+                    (order_id, previous_status, new_status, staff_id, remark)
+                )
+            else:
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (order_id, previous_status, new_status, staff_id, remark)
+                )
             
             self.db.commit()
             return True
@@ -3995,11 +4045,11 @@ class OrderStatusManager:
         try:
             # 获取当前支付状态
             result = self.database.query("SELECT pay_status, order_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            if not result:
+            if not result or len(result) == 0:
                 return False
                 
-            previous_pay_status = result['pay_status']
-            current_order_status = result['order_status']
+            previous_pay_status = result[0]['pay_status']
+            current_order_status = result[0]['order_status']
             
             # 如果支付状态没有变化，直接返回成功
             if previous_pay_status == new_status:
@@ -4021,12 +4071,20 @@ class OrderStatusManager:
                 )
                 
                 # 记录订单状态变更历史
-                self.database.execute(
-                    """INSERT INTO order_history 
-                       (order_id, previous_status, new_status, changed_by, remark) 
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (order_id, current_order_status, new_order_status, staff_id, "支付完成，自动更新订单状态")
-                )
+                if service.config.DB_TYPE.upper() == "ORACLE":
+                    self.database.execute(
+                        """INSERT INTO order_history 
+                           (history_id, order_id, previous_status, new_status, changed_by, remark) 
+                           VALUES (order_history_seq.NEXTVAL, :1, :2, :3, :4, :5)""",
+                        (order_id, current_order_status, new_order_status, staff_id, "支付完成，自动更新订单状态")
+                    )
+                else:
+                    self.database.execute(
+                        """INSERT INTO order_history 
+                           (order_id, previous_status, new_status, changed_by, remark) 
+                           VALUES (%s, %s, %s, %s, %s)""",
+                        (order_id, current_order_status, new_order_status, staff_id, "支付完成，自动更新订单状态")
+                    )
             
             self.db.commit()
             return True
@@ -4051,11 +4109,11 @@ class OrderStatusManager:
         try:
             # 获取当前订单状态
             result = self.database.query("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            if not result:
+            if not result or len(result) == 0:
                 return False
                 
-            previous_status = result['order_status']
-            pay_status = result['pay_status']
+            previous_status = result[0]['order_status']
+            pay_status = result[0]['pay_status']
             
             # 如果订单已完成，不允许取消
             if previous_status == 'completed':
@@ -4068,12 +4126,20 @@ class OrderStatusManager:
             )
             
             # 记录状态变更历史
-            self.database.execute(
-                """INSERT INTO order_history 
-                   (order_id, previous_status, new_status, changed_by, remark) 
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (order_id, previous_status, 'cancelled', staff_id, remark)
-            )
+            if service.config.DB_TYPE.upper() == "ORACLE":
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (history_id, order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (order_history_seq.NEXTVAL, :1, :2, :3, :4, :5)""",
+                    (order_id, previous_status, 'cancelled', staff_id, remark)
+                )
+            else:
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (order_id, previous_status, 'cancelled', staff_id, remark)
+                )
             
             self.db.commit()
             return True
@@ -4098,11 +4164,11 @@ class OrderStatusManager:
         try:
             # 获取当前订单状态和支付状态
             result = self.database.query("SELECT order_status, pay_status FROM hotelorder_v1 WHERE order_id = %s", (order_id,))
-            if not result:
+            if not result or len(result) == 0:
                 return False
                 
-            previous_status = result['order_status']
-            pay_status = result['pay_status']
+            previous_status = result[0]['order_status']
+            pay_status = result[0]['pay_status']
             
             # 如果订单未支付，不允许完成
             if pay_status != 'paid':
@@ -4115,12 +4181,20 @@ class OrderStatusManager:
             )
             
             # 记录状态变更历史
-            self.database.execute(
-                """INSERT INTO order_history 
-                   (order_id, previous_status, new_status, changed_by, remark) 
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (order_id, previous_status, 'completed', staff_id, remark)
-            )
+            if service.config.DB_TYPE.upper() == "ORACLE":
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (history_id, order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (order_history_seq.NEXTVAL, :1, :2, :3, :4, :5)""",
+                    (order_id, previous_status, 'completed', staff_id, remark)
+                )
+            else:
+                self.database.execute(
+                    """INSERT INTO order_history 
+                       (order_id, previous_status, new_status, changed_by, remark) 
+                       VALUES (%s, %s, %s, %s, %s)""",
+                    (order_id, previous_status, 'completed', staff_id, remark)
+                )
             
             self.db.commit()
             return True
